@@ -1,9 +1,10 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 
 const App = () => {
   const [mode, setMode] = useState<"runner" | "verifier">("runner");
   const [videoUrl, setVideoUrl] = useState("");
   const [videoId, setVideoId] = useState("");
+  const playerRef = useRef<HTMLDivElement>(null);
 
   // Extract video ID from YouTube URL
   const extractVideoId = (url: string): string => {
@@ -22,6 +23,26 @@ const App = () => {
       console.log("Invalid YouTube URL");
     }
   };
+
+  // Load YouTube IFrame API
+  useEffect(() => {
+    const tag = document.createElement("script");
+    tag.src = "https://www.youtube.com/iframe_api";
+    const firstScriptTag = document.getElementsByTagName("script")[0];
+    firstScriptTag.parentNode?.insertBefore(tag, firstScriptTag);
+  }, []);
+
+  // Create player when videoId changes
+  useEffect(() => {
+    if (videoId && (window as any).YT && playerRef.current) {
+      new (window as any).YT.Player(playerRef.current, {
+        videoId: videoId,
+        playerVars: {
+          controls: 1,
+        },
+      });
+    }
+  }, [videoId]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 text-white p-6">
@@ -75,9 +96,14 @@ const App = () => {
             </div>
           </div>
 
-          {/* Display extracted video ID for testing */}
+          {/* YouTube Player */}
           {videoId && (
-            <div className="text-sm text-green-400">Video ID: {videoId}</div>
+            <div className="bg-slate-800 rounded-lg shadow-2xl p-6">
+              <div
+                ref={playerRef}
+                className="aspect-video bg-black rounded-lg"
+              ></div>
+            </div>
           )}
         </div>
       </div>
