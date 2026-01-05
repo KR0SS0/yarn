@@ -4,6 +4,7 @@ const App = () => {
   const [mode, setMode] = useState<"runner" | "verifier">("runner");
   const [videoUrl, setVideoUrl] = useState("");
   const [videoId, setVideoId] = useState("");
+  const [urlError, setUrlError] = useState("")
   // FPS State
   const [fps, setFps] = useState<number>(30);
   const [showFpsHelp, setShowFpsHelp] = useState<boolean>(false);
@@ -22,9 +23,10 @@ const App = () => {
     const id = extractVideoId(videoUrl);
     if (id) {
       setVideoId(id);
-      console.log("Video ID extracted:", id);
+      setUrlError("");
     } else {
-      console.log("Invalid YouTube URL");
+      setVideoId("");
+      setUrlError("Invalid YouTube URL");
     }
   };
 
@@ -85,13 +87,18 @@ const App = () => {
 
           {/* Video URL Input */}
           <div className="mb-4">
-            <div className="flex gap-2">
+            <div className="flex gap-2 mb-2">
               <input
                 type="text"
                 placeholder="YouTube Video URL (e.g. https://www.youtube.com/watch?v=...)"
                 value={videoUrl}
-                onChange={(e) => setVideoUrl(e.target.value)}
-                className="flex-1 px-4 py-2 bg-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white placeholder-slate-400"
+                onChange={(e) => {
+                  setVideoUrl(e.target.value);
+                  if (urlError) setUrlError(""); // Reset error when user starts typing again
+                }}
+                className={`flex-1 px-4 py-2 bg-slate-700 rounded-lg focus:outline-none focus:ring-2 text-white placeholder-slate-400 transition ${
+                  urlError ? "ring-2 ring-red-500" : "focus:ring-blue-500"
+                }`}
               />
               <button
                 onClick={handleLoadVideo}
