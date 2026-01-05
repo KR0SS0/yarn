@@ -1,12 +1,26 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 
 const App = () => {
-  const [mode, setMode] = useState<'runner' | 'verifier'>('runner');
-  const [videoUrl, setVideoUrl] = useState('');
+  const [mode, setMode] = useState<"runner" | "verifier">("runner");
+  const [videoUrl, setVideoUrl] = useState("");
+  const [videoId, setVideoId] = useState("");
+
+  // Extract video ID from YouTube URL
+  const extractVideoId = (url: string): string => {
+    const regExp =
+      /^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#&?]*).*/;
+    const match = url.match(regExp);
+    return match && match[7].length === 11 ? match[7] : "";
+  };
 
   const handleLoadVideo = () => {
-    // Later
-    console.log('Loading video:', videoUrl);
+    const id = extractVideoId(videoUrl);
+    if (id) {
+      setVideoId(id);
+      console.log("Video ID extracted:", id);
+    } else {
+      console.log("Invalid YouTube URL");
+    }
   };
 
   return (
@@ -20,21 +34,21 @@ const App = () => {
 
           <div className="flex gap-4 mb-6">
             <button
-              onClick={() => setMode('runner')}
+              onClick={() => setMode("runner")}
               className={`px-6 py-2 rounded-lg font-semibold transition ${
-                mode === 'runner'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                mode === "runner"
+                  ? "bg-blue-600 text-white"
+                  : "bg-slate-700 text-slate-300 hover:bg-slate-600"
               }`}
             >
               Runner Mode
             </button>
             <button
-              onClick={() => setMode('verifier')}
+              onClick={() => setMode("verifier")}
               className={`px-6 py-2 rounded-lg font-semibold transition ${
-                mode === 'verifier'
-                  ? 'bg-purple-600 text-white'
-                  : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                mode === "verifier"
+                  ? "bg-purple-600 text-white"
+                  : "bg-slate-700 text-slate-300 hover:bg-slate-600"
               }`}
             >
               Verifier Mode
@@ -60,6 +74,11 @@ const App = () => {
               </button>
             </div>
           </div>
+
+          {/* Display extracted video ID for testing */}
+          {videoId && (
+            <div className="text-sm text-green-400">Video ID: {videoId}</div>
+          )}
         </div>
       </div>
     </div>
