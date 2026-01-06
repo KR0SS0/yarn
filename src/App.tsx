@@ -1,3 +1,5 @@
+// App.tsx
+
 import React, { useState, useRef, useEffect, useMemo } from "react";
 import Header from "./components/Header";
 import VideoInput from "./components/VideoInput";
@@ -5,7 +7,8 @@ import TimingSummary from "./components/TimingSummary";
 import VideoPlayer from "./components/VideoPlayer";
 import LoadList from "./components/LoadList";
 import { Load, RunMarker } from "./types";
-import { extractVideoId } from "./utils/youtube";
+import { extractVideoId } from "./utils/Youtube";
+import { secondsToFrames } from "./utils/CalculateTime";
 
 const App = () => {
   const [mode, setMode] = useState<"runner" | "verifier">("runner");
@@ -13,7 +16,7 @@ const App = () => {
   const [videoId, setVideoId] = useState("");
   const [urlError, setUrlError] = useState("");
   const [fps, setFps] = useState<number>(30);
-  const [showFpsHelp, setShowFpsHelp] = useState<boolean>(false);
+  const [showFpsHelp, setShowFpsHelp] = useState(false);
 
   const [loads, setLoads] = useState<Load[]>([]);
   const [currentLoadIndex, setCurrentLoadIndex] = useState(0);
@@ -23,41 +26,56 @@ const App = () => {
     time: null,
     offset: 0,
   });
-  const [runEnd, setRunEnd] = useState<RunMarker>({ time: null, offset: 0 });
-  const [runTimingOpen, setRunTimingOpen] = useState(true);
+  const [runEnd, setRunEnd] = useState<RunMarker>({
+    time: null,
+    offset: 0,
+  });
 
+  const [runTimingOpen, setRunTimingOpen] = useState(true);
   const playerRef = useRef<HTMLDivElement | null>(null);
+
+  // Total load time in frames
+  const totalLoadFrames = useMemo(() => {
+    return loads.reduce((sum, load) => {
+      if (load.startTime !== null && load.endTime !== null) {
+        const start = secondsToFrames(load.startTime, fps);
+        const end = secondsToFrames(load.endTime, fps);
+        return sum + (end - start);
+      }
+      return sum;
+    }, 0);
+  }, [loads, fps]);
 
   const handleLoadVideo = () => {
     const id = extractVideoId(videoUrl);
-    if (id) {
-      setVideoId(id);
-      setUrlError("");
-      if (loads.length === 0) {
-        setLoads([{ id: Date.now(), startTime: null, endTime: null }]);
-      }
-    } else {
+    if (!id) {
       setVideoId("");
       setUrlError("Invalid YouTube URL");
+      return;
+    }
+
+    setVideoId(id);
+    setUrlError("");
+
+    if (loads.length === 0) {
+      setLoads([{ id: Date.now(), startTime: null, endTime: null }]);
     }
   };
 
   const markLoadStart = () => {
-    if (player && player.getCurrentTime) {
-      const currentTime = player.getCurrentTime();
-      const newLoads = [...loads];
-      newLoads[currentLoadIndex].startTime = currentTime;
-      setLoads(newLoads);
-    }
+    if (!player?.getCurrentTime) return;
+    const time = player.getCurrentTime();
+    const updated = [...loads];
+    updated[currentLoadIndex].startTime = time;
+    setLoads(updated);
   };
 
   const markLoadEnd = () => {
-    if (player && player.getCurrentTime) {
-      const currentTime = player.getCurrentTime();
-      const newLoads = [...loads];
-      newLoads[currentLoadIndex].endTime = currentTime;
-      setLoads(newLoads);
-    }
+    if (!player?.getCurrentTime) return;
+    const time = player.getCurrentTime();
+    const updated = [...loads];
+    updated[currentLoadIndex].endTime = time;
+    setLoads(updated);
   };
 
   const addNewLoad = () => {
@@ -66,87 +84,67 @@ const App = () => {
   };
 
   const deleteLoad = (index: number) => {
-    const newLoads = loads.filter((_, i) => i !== index);
-    setLoads(newLoads);
-    if (currentLoadIndex >= newLoads.length && newLoads.length > 0) {
-      setCurrentLoadIndex(newLoads.length - 1);
-    } else if (newLoads.length === 0) {
-      setCurrentLoadIndex(0);
-    }
+    const updated = loads.filter((_, i) => i !== index);
+    setLoads(updated);
+    setCurrentLoadIndex(Math.max(0, updated.length - 1));
   };
 
   const jumpToTime = (time: number, index: number) => {
-    if (player && player.seekTo) {
-      player.seekTo(time, true);
-      setCurrentLoadIndex(index);
-    }
+    player?.seekTo?.(time, true);
+    setCurrentLoadIndex(index);
   };
 
   const markRunStart = () => {
-    if (player && player.getCurrentTime) {
-      setRunStart({
-        ...runStart,
-        time: player.getCurrentTime(),
-      });
-    }
+    if (!player?.getCurrentTime) return;
+    setRunStart({ ...runStart, time: player.getCurrentTime() });
   };
 
   const markRunEnd = () => {
-    if (player && player.getCurrentTime) {
-      setRunEnd({
-        ...runEnd,
-        time: player.getCurrentTime(),
-      });
-    }
+    if (!player?.getCurrentTime) return;
+    setRunEnd({ ...runEnd, time: player.getCurrentTime() });
   };
 
-  const totalLoadTime = useMemo(() => {
-    return loads.reduce((sum, load) => {
-      if (load.startTime !== null && load.endTime !== null) {
-        return sum + (load.endTime - load.startTime);
-      }
-      return sum;
-    }, 0);
-  }, [loads]);
-
-  const adjustedRunStart = useMemo(() => {
+  const adjustedRunStartFrames = useMemo(() => {
     if (runStart.time === null) return null;
-    return runStart.time + runStart.offset;
-  }, [runStart]);
+    return (
+      secondsToFrames(runStart.time, fps) +
+      secondsToFrames(runStart.offset, fps)
+    );
+  }, [runStart, fps]);
 
-  const adjustedRunEnd = useMemo(() => {
+  const adjustedRunEndFrames = useMemo(() => {
     if (runEnd.time === null) return null;
-    return runEnd.time + runEnd.offset;
-  }, [runEnd]);
+    return (
+      secondsToFrames(runEnd.time, fps) + secondsToFrames(runEnd.offset, fps)
+    );
+  }, [runEnd, fps]);
 
-  const rtaTime = useMemo(() => {
-    if (adjustedRunStart === null || adjustedRunEnd === null) return null;
-    return adjustedRunEnd - adjustedRunStart;
-  }, [adjustedRunStart, adjustedRunEnd]);
+  const rtaFrames = useMemo(() => {
+    if (adjustedRunStartFrames === null || adjustedRunEndFrames === null)
+      return null;
+    return adjustedRunEndFrames - adjustedRunStartFrames;
+  }, [adjustedRunStartFrames, adjustedRunEndFrames]);
 
-  const lrtTime = useMemo(() => {
-    if (rtaTime === null) return null;
-    return rtaTime - totalLoadTime;
-  }, [rtaTime, totalLoadTime]);
+  const lrtFrames = useMemo(() => {
+    if (rtaFrames === null) return null;
+    return rtaFrames - totalLoadFrames;
+  }, [rtaFrames, totalLoadFrames]);
 
   useEffect(() => {
     const tag = document.createElement("script");
     tag.src = "https://www.youtube.com/iframe_api";
-    const firstScriptTag = document.getElementsByTagName("script")[0];
-    firstScriptTag.parentNode?.insertBefore(tag, firstScriptTag);
+    document.body.appendChild(tag);
   }, []);
 
   useEffect(() => {
     if (videoId && (window as any).YT && playerRef.current) {
-      const newPlayer = new (window as any).YT.Player(playerRef.current, {
-        height: "100%",
-        width: "100%",
-        videoId: videoId,
-        playerVars: {
-          controls: 1,
-        },
-      });
-      setPlayer(newPlayer);
+      setPlayer(
+        new (window as any).YT.Player(playerRef.current, {
+          width: "100%",
+          videoId,
+          playerVars: { controls: 1 },
+        })
+      );
     }
   }, [videoId]);
 
@@ -167,7 +165,7 @@ const App = () => {
           onLoadVideo={handleLoadVideo}
         />
 
-        <TimingSummary rtaTime={rtaTime} lrtTime={lrtTime} />
+        <TimingSummary rtaFrames={rtaFrames} lrtFrames={lrtFrames} fps={fps} />
 
         {videoId && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
