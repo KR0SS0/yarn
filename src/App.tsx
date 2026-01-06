@@ -33,6 +33,7 @@ const App = () => {
     offset: 0,
   });
   const [runEnd, setRunEnd] = useState<RunMarker>({ time: null, offset: 0 });
+  const [runTimingOpen, setRunTimingOpen] = useState(true);
 
   const playerRef = useRef<HTMLDivElement>(null);
 
@@ -166,9 +167,13 @@ const App = () => {
   useEffect(() => {
     if (videoId && (window as any).YT && playerRef.current) {
       const newPlayer = new (window as any).YT.Player(playerRef.current, {
+        height: "100%",
+        width: "100%",
         videoId: videoId,
         playerVars: {
           controls: 1,
+          rel: 0,
+          modestbranding: 1,
         },
       });
       setPlayer(newPlayer);
@@ -297,16 +302,24 @@ const App = () => {
 
         {/* YouTube Player */}
         {videoId && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Video Player Section */}
-            <div className="bg-slate-800 rounded-lg shadow-2xl p-6">
+            <div className="bg-slate-800 rounded-lg shadow-2xl p-6 lg:col-span-2">
               <div
                 ref={playerRef}
                 className="aspect-video bg-black rounded-lg mb-4"
               ></div>
               {mode === "runner" && (
                 <div className="mb-4 p-3 bg-slate-700 rounded-lg">
-                  <h2 className="text-sm font-bold mb-2">Run Timing</h2>
+                  <h2
+                    onClick={() => setRunTimingOpen(!runTimingOpen)}
+                    className="text-sm font-bold mb-2 cursor-pointer select-none flex justify-between items-center"
+                  >
+                    Run Timing
+                    <span className="text-slate-400">
+                      {runTimingOpen ? "▾" : "▸"}
+                    </span>
+                  </h2>
                   {(runStart.time === null || runEnd.time === null) && (
                     <div className="flex gap-2 mb-2">
                       <button
@@ -422,7 +435,7 @@ const App = () => {
             </div>
 
             {/* Load List Section */}
-            <div className="bg-slate-800 rounded-lg shadow-2xl p-6">
+            <div className="bg-slate-800 rounded-lg shadow-2xl p-6 lg:col-span-1">
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-xl font-bold">Marked Loads</h2>
                 {mode === "runner" && (
@@ -439,14 +452,16 @@ const App = () => {
                 {loads.map((load, index) => (
                   <div
                     key={load.id}
-                    className={`p-4 rounded-lg transition ${
+                    className={`p-3 rounded-lg transition ${
                       currentLoadIndex === index
                         ? "bg-blue-900 ring-2 ring-blue-500"
                         : "bg-slate-700"
                     }`}
                   >
                     <div className="flex justify-between items-start mb-2">
-                      <span className="font-semibold">Load #{index + 1}</span>
+                      <span className="font-semibold text-sm">
+                        Load #{index + 1}
+                      </span>
                       {mode === "runner" && (
                         <button
                           onClick={() => deleteLoad(index)}
@@ -484,7 +499,7 @@ const App = () => {
                         )}
                       </div>
                       {load.startTime !== null && load.endTime !== null && (
-                        <div className="text-yellow-400 font-semibold mt-2">
+                        <div className="text-yellow-400 text-sm mt-1">
                           Duration: {(load.endTime - load.startTime).toFixed(3)}
                           s
                         </div>
