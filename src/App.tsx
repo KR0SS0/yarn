@@ -1,13 +1,25 @@
 import React, { useState, useRef, useEffect } from "react";
 
+interface Load {
+  id: number;
+  startTime: number | null;
+  endTime: number | null;
+}
+
 const App = () => {
   const [mode, setMode] = useState<"runner" | "verifier">("runner");
   const [videoUrl, setVideoUrl] = useState("");
   const [videoId, setVideoId] = useState("");
-  const [urlError, setUrlError] = useState("")
-  // FPS State
+  const [urlError, setUrlError] = useState("");
+
+  // FPS
   const [fps, setFps] = useState<number>(30);
   const [showFpsHelp, setShowFpsHelp] = useState<boolean>(false);
+
+  // Load tracking state
+  const [loads, setLoads] = useState<Load[]>([]);
+  const [currentLoadIndex, setCurrentLoadIndex] = useState(0);
+  const [player, setPlayer] = useState<any>(null);
 
   const playerRef = useRef<HTMLDivElement>(null);
 
@@ -24,10 +36,38 @@ const App = () => {
     if (id) {
       setVideoId(id);
       setUrlError("");
+      // Initialize with first load when video is loaded
+      if (loads.length === 0) {
+        setLoads([{ id: Date.now(), startTime: null, endTime: null }]);
+      }
     } else {
       setVideoId("");
       setUrlError("Invalid YouTube URL");
     }
+  };
+
+  // Mark load start and end times
+  const markLoadStart = () => {
+    if (player && player.getCurrentTime) {
+      const currentTime = player.getCurrentTime();
+      const newLoads = [...loads];
+      newLoads[currentLoadIndex].startTime = currentTime;
+      setLoads(newLoads);
+    }
+  };
+
+  const markLoadEnd = () => {
+    if (player && player.getCurrentTime) {
+      const currentTime = player.getCurrentTime();
+      const newLoads = [...loads];
+      newLoads[currentLoadIndex].endTime = currentTime;
+      setLoads(newLoads);
+    }
+  };
+
+  const addNewLoad = () => {
+    setLoads([...loads, { id: Date.now(), startTime: null, endTime: null }]);
+    setCurrentLoadIndex(loads.length);
   };
 
   // Load YouTube IFrame API
@@ -41,17 +81,15 @@ const App = () => {
   // Create player when videoId changes
   useEffect(() => {
     if (videoId && (window as any).YT && playerRef.current) {
-      new (window as any).YT.Player(playerRef.current, {
+      const newPlayer = new (window as any).YT.Player(playerRef.current, {
         videoId: videoId,
         playerVars: {
           controls: 1,
         },
       });
+      setPlayer(newPlayer);
     }
   }, [videoId]);
-
-  // Calculate frame duration
-  const frameDuration = 1 / fps;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 text-white p-6">
@@ -136,7 +174,7 @@ const App = () => {
                   <ol className="list-decimal list-inside space-y-1">
                     <li>Right-click on the YouTube video player.</li>
                     <li>
-                      Select <strong>"Stats for nerds"</strong>.
+                      Select <strong>"ⓘ Stats for nerds"</strong>.
                     </li>
                     <li>
                       Look for the line that says{" "}
@@ -151,17 +189,93 @@ const App = () => {
               )}
             </div>
           </div>
+        </div>
 
-          {/* YouTube Player */}
-          {videoId && (
+        {/* YouTube Player */}
+        {videoId && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Video Player Section */}
             <div className="bg-slate-800 rounded-lg shadow-2xl p-6">
               <div
                 ref={playerRef}
-                className="aspect-video bg-black rounded-lg"
+                className="aspect-video bg-black rounded-lg mb-4"
               ></div>
+
+              {/* Mark Load Buttons - Only show in runner mode */}
+              {mode === "runner" && (
+                <div className="flex gap-2">
+                  <button
+                    onClick={markLoadStart}
+                    className="flex-1 px-4 py-2 bg-green-600 rounded-lg hover:bg-green-700 transition"
+                  >
+                    Mark Load Start
+                  </button>
+                  <button
+                    onClick={markLoadEnd}
+                    className="flex-1 px-4 py-2 bg-red-600 rounded-lg hover:bg-red-700 transition"
+                  >
+                    Mark Load End
+                  </button>
+                </div>
+              )}
             </div>
-          )}
-        </div>
+
+            {/* Load List Section */}
+            <div className="bg-slate-800 rounded-lg shadow-2xl p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-bold">Marked Loads</h2>
+                {mode === "runner" && (
+                  <button
+                    onClick={addNewLoad}
+                    className="px-4 py-2 bg-blue-600 rounded-lg hover:bg-blue-700 transition text-sm"
+                  >
+                    + Add Load
+                  </button>
+                )}
+              </div>
+
+              <div className="space-y-3">
+                {loads.map((load, index) => (
+                  <div
+                    key={load.id}
+                    className={`p-4 rounded-lg cursor-pointer transition ${
+                      currentLoadIndex === index
+                        ? "bg-blue-900 ring-2 ring-blue-500"
+                        : "bg-slate-700 hover:bg-slate-600"
+                    }`}
+                    onClick={() => setCurrentLoadIndex(index)}
+                  >
+                    <div className="font-semibold mb-2">Load #{index + 1}</div>
+                    <div className="text-sm space-y-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-green-400">Start:</span>
+                        <span>
+                          {load.startTime !== null
+                            ? `${load.startTime.toFixed(3)}s`
+                            : "Not set"}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-red-400">End:</span>
+                        <span>
+                          {load.endTime !== null
+                            ? `${load.endTime.toFixed(3)}s`
+                            : "Not set"}
+                        </span>
+                      </div>
+                      {load.startTime !== null && load.endTime !== null && (
+                        <div className="text-yellow-400 font-semibold mt-2">
+                          Duration: {(load.endTime - load.startTime).toFixed(3)}
+                          s
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
