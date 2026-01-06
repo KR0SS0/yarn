@@ -1,9 +1,15 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useMemo } from "react";
+import { Trash2 } from "lucide-react";
 
 interface Load {
   id: number;
   startTime: number | null;
   endTime: number | null;
+}
+
+interface RunMarker {
+  time: number | null;
+  offset: number;
 }
 
 const App = () => {
@@ -20,6 +26,13 @@ const App = () => {
   const [loads, setLoads] = useState<Load[]>([]);
   const [currentLoadIndex, setCurrentLoadIndex] = useState(0);
   const [player, setPlayer] = useState<any>(null);
+
+  // Track run start/end times
+  const [runStart, setRunStart] = useState<RunMarker>({
+    time: null,
+    offset: 0,
+  });
+  const [runEnd, setRunEnd] = useState<RunMarker>({ time: null, offset: 0 });
 
   const playerRef = useRef<HTMLDivElement>(null);
 
@@ -46,7 +59,7 @@ const App = () => {
     }
   };
 
-  // Mark load start and end times
+  // Mark load start
   const markLoadStart = () => {
     if (player && player.getCurrentTime) {
       const currentTime = player.getCurrentTime();
@@ -56,6 +69,7 @@ const App = () => {
     }
   };
 
+  // Mark load end
   const markLoadEnd = () => {
     if (player && player.getCurrentTime) {
       const currentTime = player.getCurrentTime();
@@ -68,6 +82,76 @@ const App = () => {
   const addNewLoad = () => {
     setLoads([...loads, { id: Date.now(), startTime: null, endTime: null }]);
     setCurrentLoadIndex(loads.length);
+  };
+
+  const deleteLoad = (index: number) => {
+    const newLoads = loads.filter((_, i) => i !== index);
+    setLoads(newLoads);
+    if (currentLoadIndex >= newLoads.length && newLoads.length > 0) {
+      setCurrentLoadIndex(newLoads.length - 1);
+    } else if (newLoads.length === 0) {
+      setCurrentLoadIndex(0);
+    }
+  };
+
+  // Total load time
+  const totalLoadTime = useMemo(() => {
+    return loads.reduce((sum, load) => {
+      if (load.startTime !== null && load.endTime !== null) {
+        return sum + (load.endTime - load.startTime);
+      }
+      return sum;
+    }, 0);
+  }, [loads]);
+
+  // Mark run start
+  const markRunStart = () => {
+    if (player && player.getCurrentTime) {
+      setRunStart({
+        ...runStart,
+        time: player.getCurrentTime(),
+      });
+    }
+  };
+
+  // Mark run end
+  const markRunEnd = () => {
+    if (player && player.getCurrentTime) {
+      setRunEnd({
+        ...runEnd,
+        time: player.getCurrentTime(),
+      });
+    }
+  };
+
+  // Adjusted run start / end (time + offset)
+  const adjustedRunStart = useMemo(() => {
+    if (runStart.time === null) return null;
+    return runStart.time + runStart.offset;
+  }, [runStart]);
+
+  const adjustedRunEnd = useMemo(() => {
+    if (runEnd.time === null) return null;
+    return runEnd.time + runEnd.offset;
+  }, [runEnd]);
+
+  // RTA = end - start
+  const rtaTime = useMemo(() => {
+    if (adjustedRunStart === null || adjustedRunEnd === null) return null;
+    return adjustedRunEnd - adjustedRunStart;
+  }, [adjustedRunStart, adjustedRunEnd]);
+
+  // LRT = RTA - total loads
+  const lrtTime = useMemo(() => {
+    if (rtaTime === null) return null;
+    return rtaTime - totalLoadTime;
+  }, [rtaTime, totalLoadTime]);
+
+  const jumpToTime = (time: number, index: number) => {
+    if (player && player.seekTo) {
+      player.seekTo(time, true);
+      setCurrentLoadIndex(index);
+    }
   };
 
   // Load YouTube IFrame API
@@ -189,6 +273,26 @@ const App = () => {
               )}
             </div>
           </div>
+          {rtaTime !== null && lrtTime !== null && (
+            <div className="mb-3 text-sm bg-slate-700 p-3 rounded">
+              <div className="relative group block">
+                <div className="cursor-help">
+                  <strong>RTA:</strong> {rtaTime.toFixed(3)}s
+                </div>
+                <div className="absolute left-0 bottom-full mb-1 hidden group-hover:block bg-black text-white text-xs rounded px-2 py-1 z-50 w-max max-w-xs">
+                  Real Time Attack (Total time including loading screens)
+                </div>
+              </div>
+              <div className="relative group inline-block mt-1">
+                <div className="cursor-help">
+                  <strong>LRT:</strong> {lrtTime.toFixed(3)}s
+                </div>
+                <div className="absolute left-0 bottom-full mb-1 hidden group-hover:block bg-black text-white text-xs rounded px-2 py-1 z-50 w-max max-w-xs">
+                  Load Removed Time (Removed all loading screens)
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* YouTube Player */}
@@ -200,7 +304,104 @@ const App = () => {
                 ref={playerRef}
                 className="aspect-video bg-black rounded-lg mb-4"
               ></div>
+              {mode === "runner" && (
+                <div className="mb-4 p-3 bg-slate-700 rounded-lg">
+                  <h2 className="text-sm font-bold mb-2">Run Timing</h2>
+                  {(runStart.time === null || runEnd.time === null) && (
+                    <div className="flex gap-2 mb-2">
+                      <button
+                        onClick={markRunStart}
+                        className="flex-1 px-3 py-2 bg-green-700 rounded hover:bg-green-800 transition"
+                      >
+                        Mark Run Start
+                      </button>
 
+                      <button
+                        onClick={markRunEnd}
+                        className="flex-1 px-3 py-2 bg-red-700 rounded hover:bg-red-800 transition"
+                      >
+                        Mark Run End
+                      </button>
+                    </div>
+                  )}
+
+                  <div className="text-xs text-slate-300 space-y-2">
+                    {/* Run Start */}
+                    <div>
+                      <strong>Start:</strong>{" "}
+                      {runStart.time !== null ? (
+                        <>
+                          <input
+                            type="number"
+                            step="0.001"
+                            value={runStart.time}
+                            onChange={(e) =>
+                              setRunStart({
+                                ...runStart,
+                                time: Number(e.target.value),
+                              })
+                            }
+                            className="w-24 bg-slate-900 border border-slate-600 rounded px-1 ml-1"
+                          />
+                          s<span className="ml-2 text-slate-400">Offset:</span>
+                          <input
+                            type="number"
+                            step="0.001"
+                            value={runStart.offset}
+                            onChange={(e) =>
+                              setRunStart({
+                                ...runStart,
+                                offset: Number(e.target.value),
+                              })
+                            }
+                            className="w-20 bg-slate-900 border border-slate-600 rounded px-1 ml-1"
+                          />
+                          s
+                        </>
+                      ) : (
+                        "Not set"
+                      )}
+                    </div>
+
+                    {/* Run End */}
+                    <div>
+                      <strong>End:</strong>{" "}
+                      {runEnd.time !== null ? (
+                        <>
+                          <input
+                            type="number"
+                            step="0.001"
+                            value={runEnd.time}
+                            onChange={(e) =>
+                              setRunEnd({
+                                ...runEnd,
+                                time: Number(e.target.value),
+                              })
+                            }
+                            className="w-24 bg-slate-900 border border-slate-600 rounded px-1 ml-1"
+                          />
+                          s<span className="ml-2 text-slate-400">Offset:</span>
+                          <input
+                            type="number"
+                            step="0.001"
+                            value={runEnd.offset}
+                            onChange={(e) =>
+                              setRunEnd({
+                                ...runEnd,
+                                offset: Number(e.target.value),
+                              })
+                            }
+                            className="w-20 bg-slate-900 border border-slate-600 rounded px-1 ml-1"
+                          />
+                          s
+                        </>
+                      ) : (
+                        "Not set"
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
               {/* Mark Load Buttons - Only show in runner mode */}
               {mode === "runner" && (
                 <div className="flex gap-2">
@@ -238,30 +439,49 @@ const App = () => {
                 {loads.map((load, index) => (
                   <div
                     key={load.id}
-                    className={`p-4 rounded-lg cursor-pointer transition ${
+                    className={`p-4 rounded-lg transition ${
                       currentLoadIndex === index
                         ? "bg-blue-900 ring-2 ring-blue-500"
-                        : "bg-slate-700 hover:bg-slate-600"
+                        : "bg-slate-700"
                     }`}
-                    onClick={() => setCurrentLoadIndex(index)}
                   >
-                    <div className="font-semibold mb-2">Load #{index + 1}</div>
+                    <div className="flex justify-between items-start mb-2">
+                      <span className="font-semibold">Load #{index + 1}</span>
+                      {mode === "runner" && (
+                        <button
+                          onClick={() => deleteLoad(index)}
+                          className="text-red-400 hover:text-red-300 transition"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      )}
+                    </div>
                     <div className="text-sm space-y-1">
                       <div className="flex items-center gap-2">
                         <span className="text-green-400">Start:</span>
-                        <span>
-                          {load.startTime !== null
-                            ? `${load.startTime.toFixed(3)}s`
-                            : "Not set"}
-                        </span>
+                        {load.startTime !== null ? (
+                          <button
+                            onClick={() => jumpToTime(load.startTime!, index)}
+                            className="text-blue-400 hover:underline"
+                          >
+                            {load.startTime.toFixed(3)}s
+                          </button>
+                        ) : (
+                          <span className="text-slate-500">Not set</span>
+                        )}
                       </div>
                       <div className="flex items-center gap-2">
                         <span className="text-red-400">End:</span>
-                        <span>
-                          {load.endTime !== null
-                            ? `${load.endTime.toFixed(3)}s`
-                            : "Not set"}
-                        </span>
+                        {load.endTime !== null ? (
+                          <button
+                            onClick={() => jumpToTime(load.endTime!, index)}
+                            className="text-blue-400 hover:underline"
+                          >
+                            {load.endTime.toFixed(3)}s
+                          </button>
+                        ) : (
+                          <span className="text-slate-500">Not set</span>
+                        )}
                       </div>
                       {load.startTime !== null && load.endTime !== null && (
                         <div className="text-yellow-400 font-semibold mt-2">
