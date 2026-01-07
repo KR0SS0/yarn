@@ -6,6 +6,7 @@ interface LoadListProps {
   loads: Load[];
   currentLoadIndex: number;
   mode: "runner" | "verifier";
+  overlappingLoadIndices: Set<number>;
   onAddLoad: () => void;
   onDeleteLoad: (index: number) => void;
   onJumpToTime: (time: number, index: number) => void;
@@ -16,6 +17,7 @@ const LoadList: React.FC<LoadListProps> = ({
   loads,
   currentLoadIndex,
   mode,
+  overlappingLoadIndices,
   onAddLoad,
   onDeleteLoad,
   onJumpToTime,
@@ -36,71 +38,84 @@ const LoadList: React.FC<LoadListProps> = ({
       </div>
 
       <div className="space-y-3 max-h-[600px] overflow-y-auto">
-        {loads.map((load, index) => (
-          <div
-            key={load.id}
-            onClick={() => onSelectLoad(index)}
-            className={`p-3 rounded-lg transition cursor-pointer ${
-              currentLoadIndex === index
-                ? "bg-blue-900 ring-2 ring-blue-500"
-                : "bg-slate-700 hover:bg-slate-600"
-            }`}
-          >
-            <div className="flex justify-between items-start mb-2">
-              <span className="font-semibold text-sm">Load #{index + 1}</span>
-              {mode === "runner" && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onDeleteLoad(index);
-                  }}
-                  className="text-red-400 hover:text-red-300 transition"
-                >
-                  <Trash2 size={16} />
-                </button>
-              )}
-            </div>
-            <div className="text-sm space-y-1">
-              <div className="flex items-center gap-2">
-                <span className="text-green-400">Start:</span>
-                {load.startTime !== null ? (
+        {loads.map((load, index) => {
+          const isOverlapping = overlappingLoadIndices.has(index);
+
+          return (
+            <div
+              key={load.id}
+              onClick={() => onSelectLoad(index)}
+              className={`p-3 rounded-lg transition cursor-pointer ${
+                isOverlapping
+                  ? "bg-red-900/50 ring-2 ring-red-500"
+                  : currentLoadIndex === index
+                    ? "bg-blue-900 ring-2 ring-blue-500"
+                    : "bg-slate-700 hover:bg-slate-600"
+              }`}
+            >
+              <div className="flex justify-between items-start mb-2">
+                <span className="font-semibold text-sm">
+                  Load #{index + 1}
+                  {isOverlapping && (
+                    <span className="ml-2 text-xs text-red-400">
+                      (Overlapping)
+                    </span>
+                  )}
+                </span>
+                {mode === "runner" && (
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      onJumpToTime(load.startTime!, index);
+                      onDeleteLoad(index);
                     }}
-                    className="text-blue-400 hover:underline"
+                    className="text-red-400 hover:text-red-300 transition"
                   >
-                    {load.startTime.toFixed(3)}s
+                    <Trash2 size={16} />
                   </button>
-                ) : (
-                  <span className="text-slate-500">Not set</span>
                 )}
               </div>
-              <div className="flex items-center gap-2">
-                <span className="text-red-400">End:</span>
-                {load.endTime !== null ? (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onJumpToTime(load.endTime!, index);
-                    }}
-                    className="text-blue-400 hover:underline"
-                  >
-                    {load.endTime.toFixed(3)}s
-                  </button>
-                ) : (
-                  <span className="text-slate-500">Not set</span>
-                )}
-              </div>
-              {load.startTime !== null && load.endTime !== null && (
-                <div className="text-yellow-400 text-sm mt-1">
-                  Duration: {(load.endTime - load.startTime).toFixed(3)}s
+              <div className="text-sm space-y-1">
+                <div className="flex items-center gap-2">
+                  <span className="text-green-400">Start:</span>
+                  {load.startTime !== null ? (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onJumpToTime(load.startTime!, index);
+                      }}
+                      className="text-blue-400 hover:underline"
+                    >
+                      {load.startTime.toFixed(3)}s
+                    </button>
+                  ) : (
+                    <span className="text-slate-500">Not set</span>
+                  )}
                 </div>
-              )}
+                <div className="flex items-center gap-2">
+                  <span className="text-red-400">End:</span>
+                  {load.endTime !== null ? (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onJumpToTime(load.endTime!, index);
+                      }}
+                      className="text-blue-400 hover:underline"
+                    >
+                      {load.endTime.toFixed(3)}s
+                    </button>
+                  ) : (
+                    <span className="text-slate-500">Not set</span>
+                  )}
+                </div>
+                {load.startTime !== null && load.endTime !== null && (
+                  <div className="text-yellow-400 text-sm mt-1">
+                    Duration: {(load.endTime - load.startTime).toFixed(3)}s
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

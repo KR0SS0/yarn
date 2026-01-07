@@ -4,7 +4,8 @@ import VideoInput from "./components/VideoInput";
 import TimingSummary from "./components/TimingSummary";
 import VideoPlayer from "./components/VideoPlayer";
 import LoadList from "./components/LoadList";
-import { Load, RunMarker } from "./types";
+import ValidationWarnings from "./components/ValidationWarnings";
+import { Load, RunMarker, ValidationWarning } from "./types";
 import { extractVideoId } from "./utils/Youtube";
 import { secondsToFrames } from "./utils/CalculateTime";
 
@@ -36,6 +37,57 @@ const App = () => {
 
   const [runTimingOpen, setRunTimingOpen] = useState(true);
 
+  // Detect overlapping loads
+  const { overlappingIndices, warnings } = useMemo(() => {
+    const overlapping = new Set<number>();
+    const validationWarnings: ValidationWarning[] = [];
+
+    // Only check complete loads
+    const completeLoads = loads
+      .map((load, index) => ({ load, index }))
+      .filter(({ load }) => load.startTime !== null && load.endTime !== null);
+
+    for (let i = 0; i < completeLoads.length; i++) {
+      for (let j = i + 1; j < completeLoads.length; j++) {
+        const load1 = completeLoads[i].load;
+        const load2 = completeLoads[j].load;
+        const idx1 = completeLoads[i].index;
+        const idx2 = completeLoads[j].index;
+
+        // Check if ranges overlap
+        const start1 = load1.startTime!;
+        const end1 = load1.endTime!;
+        const start2 = load2.startTime!;
+        const end2 = load2.endTime!;
+
+        const hasOverlap =
+          (start1 <= start2 && end1 > start2) ||
+          (start2 <= start1 && end2 > start1);
+
+        if (hasOverlap) {
+          overlapping.add(idx1);
+          overlapping.add(idx2);
+
+          // Add warning if not already added for this pair
+          const existingWarning = validationWarnings.find(
+            (w) =>
+              w.affectedLoads.includes(idx1) && w.affectedLoads.includes(idx2)
+          );
+
+          if (!existingWarning) {
+            validationWarnings.push({
+              type: "overlap",
+              message: `Load #${idx1 + 1} and Load #${idx2 + 1} have overlapping time ranges. Please adjust the timestamps.`,
+              affectedLoads: [idx1, idx2],
+            });
+          }
+        }
+      }
+    }
+
+    return { overlappingIndices: overlapping, warnings: validationWarnings };
+  }, [loads]);
+
   // Total load time in frames
   const totalLoadFrames = useMemo(() => {
     return loads.reduce((sum, load) => {
@@ -49,7 +101,6 @@ const App = () => {
   }, [loads, fps]);
 
   const handleLoadVideo = () => {
-    // Empty input = default test video
     if (!videoUrl.trim()) {
       setVideoId(DEFAULT_TEST_VIDEO_ID);
       setUrlError("");
@@ -142,11 +193,9 @@ const App = () => {
     document.body.appendChild(tag);
   }, []);
 
-  //Player
   useEffect(() => {
     if (!videoId || !(window as any).YT) return;
 
-    // If player exists, just load the new video
     if (ytPlayerRef.current?.loadVideoById) {
       ytPlayerRef.current.loadVideoById(videoId);
       return;
@@ -154,7 +203,6 @@ const App = () => {
 
     if (!playerRef.current) return;
 
-    // Create player once
     ytPlayerRef.current = new (window as any).YT.Player(playerRef.current, {
       width: "100%",
       videoId,
@@ -163,7 +211,6 @@ const App = () => {
       },
     });
 
-    // Cleanup
     return () => {
       if (ytPlayerRef.current) {
         ytPlayerRef.current.destroy();
@@ -189,11 +236,9 @@ const App = () => {
           onLoadVideo={handleLoadVideo}
         />
 
-        <TimingSummary
-          rtaFrames={rtaFrames}
-          lrtFrames={lrtFrames}
-          fps={fps}
-        />
+        <TimingSummary rtaFrames={rtaFrames} lrtFrames={lrtFrames} fps={fps} />
+
+        <ValidationWarnings warnings={warnings} />
 
         {videoId && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -217,6 +262,7 @@ const App = () => {
               loads={loads}
               currentLoadIndex={currentLoadIndex}
               mode={mode}
+              overlappingLoadIndices={overlappingIndices}
               onAddLoad={addNewLoad}
               onDeleteLoad={deleteLoad}
               onJumpToTime={jumpToTime}
