@@ -1,5 +1,3 @@
-// App.tsx
-
 import React, { useState, useRef, useEffect, useMemo } from "react";
 import Header from "./components/Header";
 import VideoInput from "./components/VideoInput";
@@ -10,17 +8,22 @@ import { Load, RunMarker } from "./types";
 import { extractVideoId } from "./utils/Youtube";
 import { secondsToFrames } from "./utils/CalculateTime";
 
+const DEFAULT_TEST_VIDEO_ID = "IfFfdSRMpQs";
+
 const App = () => {
   const [mode, setMode] = useState<"runner" | "verifier">("runner");
   const [videoUrl, setVideoUrl] = useState("");
-  const [videoId, setVideoId] = useState("");
+  const [videoId, setVideoId] = useState<string | null>(null);
   const [urlError, setUrlError] = useState("");
   const [fps, setFps] = useState<number>(30);
   const [showFpsHelp, setShowFpsHelp] = useState(false);
 
   const [loads, setLoads] = useState<Load[]>([]);
   const [currentLoadIndex, setCurrentLoadIndex] = useState(0);
-  const [player, setPlayer] = useState<any>(null);
+  const playerRef = useRef<HTMLDivElement | null>(null);
+  const ytPlayerRef = useRef<any>(null);
+  const player = ytPlayerRef.current;
+
 
   const [runStart, setRunStart] = useState<RunMarker>({
     time: null,
@@ -32,7 +35,6 @@ const App = () => {
   });
 
   const [runTimingOpen, setRunTimingOpen] = useState(true);
-  const playerRef = useRef<HTMLDivElement | null>(null);
 
   // Total load time in frames
   const totalLoadFrames = useMemo(() => {
@@ -47,19 +49,23 @@ const App = () => {
   }, [loads, fps]);
 
   const handleLoadVideo = () => {
+    // Empty input → default test video
+    if (!videoUrl.trim()) {
+      setVideoId(DEFAULT_TEST_VIDEO_ID);
+      setUrlError("");
+      return;
+    }
+
     const id = extractVideoId(videoUrl);
+
     if (!id) {
-      setVideoId("");
+      setVideoId(null);
       setUrlError("Invalid YouTube URL");
       return;
     }
 
     setVideoId(id);
     setUrlError("");
-
-    if (loads.length === 0) {
-      setLoads([{ id: Date.now(), startTime: null, endTime: null }]);
-    }
   };
 
   const markLoadStart = () => {
@@ -136,16 +142,34 @@ const App = () => {
     document.body.appendChild(tag);
   }, []);
 
+  //Player
   useEffect(() => {
-    if (videoId && (window as any).YT && playerRef.current) {
-      setPlayer(
-        new (window as any).YT.Player(playerRef.current, {
-          width: "100%",
-          videoId,
-          playerVars: { controls: 1 },
-        })
-      );
+    if (!videoId || !(window as any).YT) return;
+
+    // If player exists, just load the new video
+    if (ytPlayerRef.current?.loadVideoById) {
+      ytPlayerRef.current.loadVideoById(videoId);
+      return;
     }
+
+    if (!playerRef.current) return;
+
+    // Create player once
+    ytPlayerRef.current = new (window as any).YT.Player(playerRef.current, {
+      width: "100%",
+      videoId,
+      playerVars: {
+        controls: 1,
+      },
+    });
+
+    // Cleanup
+    return () => {
+      if (ytPlayerRef.current) {
+        ytPlayerRef.current.destroy();
+        ytPlayerRef.current = null;
+      }
+    };
   }, [videoId]);
 
   return (
