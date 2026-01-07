@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { RunMarker } from "../types";
+import { Eye, EyeOff } from "lucide-react";
 
 interface RunTimingProps {
   runStart: RunMarker;
@@ -58,14 +59,23 @@ const RunTiming: React.FC<RunTimingProps> = ({
   };
 
   return (
-    <div className="mb-4 p-3 bg-slate-700 rounded-lg">
-      <h2
+    <div
+      className={`mb-4 bg-slate-700 rounded-lg transition-all ${
+        runTimingOpen ? "p-3" : "px-3 py-2"
+      }`}
+    >
+      <div
         onClick={() => setRunTimingOpen(!runTimingOpen)}
-        className="text-sm font-bold mb-2 cursor-pointer select-none flex justify-between items-center"
+        className={`text-sm font-bold cursor-pointer select-none flex justify-between items-center group ${
+          runTimingOpen ? "mb-2" : "mb-0"
+        }`}
+        title={runTimingOpen ? "Hide" : "Show"}
       >
-        Start / End Run Timing
-        <span className="text-slate-400">{runTimingOpen ? "▾" : "▸"}</span>
-      </h2>
+        <span>Start / End Run Timing</span>
+        <span className="text-slate-400 group-hover:text-white transition-colors">
+          {runTimingOpen ? <Eye size={18} /> : <EyeOff size={18} />}
+        </span>
+      </div>
 
       {runTimingOpen && (
         <>
