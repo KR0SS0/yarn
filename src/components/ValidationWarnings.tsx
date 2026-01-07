@@ -1,10 +1,9 @@
 import React from "react";
 import { AlertCircle } from "lucide-react";
+import { ValidationWarning } from "../types";
 
-interface ValidationWarning {
-  type: "overlap" | "invalid-duration" | "outside-run" | "error";
-  message: string;
-  affectedLoads: number[];
+interface ValidationWarningsProps {
+  warnings: ValidationWarning[];
 }
 
 interface ValidationWarningsProps {

@@ -3,7 +3,7 @@ import RunTiming from "./RunTiming";
 import { RunMarker } from "../types";
 
 interface VideoPlayerProps {
-  playerRef: React.RefObject<HTMLDivElement>;
+  playerRef: React.RefObject<HTMLDivElement | null>;
   mode: "runner" | "verifier";
   fps: number;
   runStart: RunMarker;

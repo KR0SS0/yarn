@@ -5,17 +5,11 @@ import TimingSummary from "./components/TimingSummary";
 import VideoPlayer from "./components/VideoPlayer";
 import LoadList from "./components/LoadList";
 import ValidationWarnings from "./components/ValidationWarnings";
-import { Load, RunMarker } from "./types";
+import { Load, RunMarker, ValidationWarning } from "./types";
 import { extractVideoId } from "./utils/Youtube";
 import { secondsToFrames } from "./utils/CalculateTime";
 
 const DEFAULT_TEST_VIDEO_ID = "IfFfdSRMpQs";
-
-interface ValidationWarning {
-  type: "overlap" | "invalid-duration" | "outside-run" | "error";
-  message: string;
-  affectedLoads: number[];
-}
 
 const App = () => {
   const [mode, setMode] = useState<"runner" | "verifier">("runner");
@@ -28,7 +22,7 @@ const App = () => {
   const [loads, setLoads] = useState<Load[]>([]);
   const [currentLoadIndex, setCurrentLoadIndex] = useState(0);
 
-  const playerRef = useRef<HTMLDivElement>(null as any);
+const playerRef = useRef<HTMLDivElement | null>(null);
   const ytPlayerRef = useRef<any>(null);
 
   const [runStart, setRunStart] = useState<RunMarker>({
