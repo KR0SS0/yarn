@@ -5,11 +5,17 @@ import TimingSummary from "./components/TimingSummary";
 import VideoPlayer from "./components/VideoPlayer";
 import LoadList from "./components/LoadList";
 import ValidationWarnings from "./components/ValidationWarnings";
-import { Load, RunMarker, ValidationWarning } from "./types";
+import { Load, RunMarker } from "./types";
 import { extractVideoId } from "./utils/Youtube";
 import { secondsToFrames } from "./utils/CalculateTime";
 
 const DEFAULT_TEST_VIDEO_ID = "IfFfdSRMpQs";
+
+interface ValidationWarning {
+  type: "overlap" | "invalid-duration" | "outside-run" | "error";
+  message: string;
+  affectedLoads: number[];
+}
 
 const App = () => {
   const [mode, setMode] = useState<"runner" | "verifier">("runner");
@@ -22,7 +28,7 @@ const App = () => {
   const [loads, setLoads] = useState<Load[]>([]);
   const [currentLoadIndex, setCurrentLoadIndex] = useState(0);
 
-  const playerRef = useRef<HTMLDivElement | null>(null);
+  const playerRef = useRef<HTMLDivElement>(null as any);
   const ytPlayerRef = useRef<any>(null);
 
   const [runStart, setRunStart] = useState<RunMarker>({
@@ -37,56 +43,153 @@ const App = () => {
 
   const [runTimingOpen, setRunTimingOpen] = useState(true);
 
-  // Detect overlapping loads
-  const { overlappingIndices, warnings } = useMemo(() => {
-    const overlapping = new Set<number>();
-    const validationWarnings: ValidationWarning[] = [];
+  // Calculate adjusted run boundaries
+  const adjustedRunStart = useMemo(() => {
+    if (runStart.time === null) return null;
+    return runStart.time + runStart.offset;
+  }, [runStart]);
 
-    // Only check complete loads
-    const completeLoads = loads
-      .map((load, index) => ({ load, index }))
-      .filter(({ load }) => load.startTime !== null && load.endTime !== null);
+  const adjustedRunEnd = useMemo(() => {
+    if (runEnd.time === null) return null;
+    return runEnd.time + runEnd.offset;
+  }, [runEnd]);
 
-    for (let i = 0; i < completeLoads.length; i++) {
-      for (let j = i + 1; j < completeLoads.length; j++) {
-        const load1 = completeLoads[i].load;
-        const load2 = completeLoads[j].load;
-        const idx1 = completeLoads[i].index;
-        const idx2 = completeLoads[j].index;
+  // Comprehensive validation
+ const {
+   overlappingIndices,
+   invalidDurationIndices,
+   outsideRunIndices,
+   warnings,
+ } = useMemo(() => {
+   const overlapping = new Set<number>();
+   const invalidDuration = new Set<number>();
+   const outsideRun = new Set<number>();
+   const validationWarnings: ValidationWarning[] = [];
 
-        // Check if ranges overlap
-        const start1 = load1.startTime!;
-        const end1 = load1.endTime!;
-        const start2 = load2.startTime!;
-        const end2 = load2.endTime!;
+   // Check if run end is before run start
+   if (adjustedRunStart !== null && adjustedRunEnd !== null) {
+     if (adjustedRunEnd <= adjustedRunStart) {
+       validationWarnings.push({
+         type: "error",
+         message: `The run end (${adjustedRunEnd.toFixed(3)}s) cannot be earlier than or equal to the run start (${adjustedRunStart.toFixed(3)}s).`,
+         affectedLoads: [],
+       });
+     }
+   }
 
-        const hasOverlap =
-          (start1 <= start2 && end1 > start2) ||
-          (start2 <= start1 && end2 > start1);
+   const completeLoads = loads
+     .map((load, index) => ({ load, index }))
+     .filter(({ load }) => load.startTime !== null && load.endTime !== null);
 
-        if (hasOverlap) {
-          overlapping.add(idx1);
-          overlapping.add(idx2);
+   // Check for invalid durations (0 or negative)
+   completeLoads.forEach(({ load, index }) => {
+     const duration = load.endTime! - load.startTime!;
+     if (duration <= 0) {
+       invalidDuration.add(index);
+       validationWarnings.push({
+         type: "invalid-duration",
+         message: `Load #${index + 1} has ${
+           duration === 0 ? "zero" : "negative"
+         } duration (${duration.toFixed(
+           3
+         )}s). End time must be after start time.`,
+         affectedLoads: [index],
+       });
+     }
+   });
 
-          // Add warning if not already added for this pair
-          const existingWarning = validationWarnings.find(
-            (w) =>
-              w.affectedLoads.includes(idx1) && w.affectedLoads.includes(idx2)
-          );
+   // Check if loads are outside run boundaries
+   if (adjustedRunStart !== null && adjustedRunEnd !== null) {
+     completeLoads.forEach(({ load, index }) => {
+       const start = load.startTime!;
+       const end = load.endTime!;
 
-          if (!existingWarning) {
-            validationWarnings.push({
-              type: "overlap",
-              message: `Load #${idx1 + 1} and Load #${idx2 + 1} have overlapping time ranges. Please adjust the timestamps.`,
-              affectedLoads: [idx1, idx2],
-            });
-          }
-        }
-      }
-    }
+       const beforeRun = end <= adjustedRunStart;
+       const afterRun = start >= adjustedRunEnd;
+       const partiallyOutside =
+         start < adjustedRunStart || end > adjustedRunEnd;
 
-    return { overlappingIndices: overlapping, warnings: validationWarnings };
-  }, [loads]);
+       if (beforeRun || afterRun || partiallyOutside) {
+         outsideRun.add(index);
+         let message = "";
+
+         if (beforeRun) {
+           message = `Load #${
+             index + 1
+           } is entirely before the run start (${adjustedRunStart.toFixed(
+             3
+           )}s).`;
+         } else if (afterRun) {
+           message = `Load #${
+             index + 1
+           } is entirely after the run end (${adjustedRunEnd.toFixed(3)}s).`;
+         } else if (start < adjustedRunStart) {
+           message = `Load #${
+             index + 1
+           } starts before the run start (${adjustedRunStart.toFixed(3)}s).`;
+         } else if (end > adjustedRunEnd) {
+           message = `Load #${
+             index + 1
+           } ends after the run end (${adjustedRunEnd.toFixed(3)}s).`;
+         }
+
+         validationWarnings.push({
+           type: "outside-run",
+           message,
+           affectedLoads: [index],
+         });
+       }
+     });
+   }
+
+   // Check for overlaps
+   for (let i = 0; i < completeLoads.length; i++) {
+     for (let j = i + 1; j < completeLoads.length; j++) {
+       const load1 = completeLoads[i].load;
+       const load2 = completeLoads[j].load;
+       const idx1 = completeLoads[i].index;
+       const idx2 = completeLoads[j].index;
+
+       const start1 = load1.startTime!;
+       const end1 = load1.endTime!;
+       const start2 = load2.startTime!;
+       const end2 = load2.endTime!;
+
+       const hasOverlap =
+         (start1 <= start2 && end1 > start2) ||
+         (start2 <= start1 && end2 > start1);
+
+       if (hasOverlap) {
+         overlapping.add(idx1);
+         overlapping.add(idx2);
+
+         const existingWarning = validationWarnings.find(
+           (w) =>
+             w.type === "overlap" &&
+             w.affectedLoads.includes(idx1) &&
+             w.affectedLoads.includes(idx2)
+         );
+
+         if (!existingWarning) {
+           validationWarnings.push({
+             type: "overlap",
+             message: `Load #${idx1 + 1} and Load #${
+               idx2 + 1
+             } have overlapping time ranges. Please adjust the timestamps.`,
+             affectedLoads: [idx1, idx2],
+           });
+         }
+       }
+     }
+   }
+
+   return {
+     overlappingIndices: overlapping,
+     invalidDurationIndices: invalidDuration,
+     outsideRunIndices: outsideRun,
+     warnings: validationWarnings,
+   };
+ }, [loads, adjustedRunStart, adjustedRunEnd]);
 
   // Total load time in frames
   const totalLoadFrames = useMemo(() => {
@@ -263,6 +366,8 @@ const App = () => {
               currentLoadIndex={currentLoadIndex}
               mode={mode}
               overlappingLoadIndices={overlappingIndices}
+              invalidDurationIndices={invalidDurationIndices}
+              outsideRunIndices={outsideRunIndices}
               onAddLoad={addNewLoad}
               onDeleteLoad={deleteLoad}
               onJumpToTime={jumpToTime}

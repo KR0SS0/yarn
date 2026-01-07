@@ -7,6 +7,8 @@ interface LoadListProps {
   currentLoadIndex: number;
   mode: "runner" | "verifier";
   overlappingLoadIndices: Set<number>;
+  invalidDurationIndices: Set<number>;
+  outsideRunIndices: Set<number>;
   onAddLoad: () => void;
   onDeleteLoad: (index: number) => void;
   onJumpToTime: (time: number, index: number) => void;
@@ -18,6 +20,8 @@ const LoadList: React.FC<LoadListProps> = ({
   currentLoadIndex,
   mode,
   overlappingLoadIndices,
+  invalidDurationIndices,
+  outsideRunIndices,
   onAddLoad,
   onDeleteLoad,
   onJumpToTime,
@@ -40,13 +44,16 @@ const LoadList: React.FC<LoadListProps> = ({
       <div className="space-y-3 max-h-[600px] overflow-y-auto">
         {loads.map((load, index) => {
           const isOverlapping = overlappingLoadIndices.has(index);
+          const isInvalidDuration = invalidDurationIndices.has(index);
+          const isOutsideRun = outsideRunIndices.has(index);
+          const hasError = isOverlapping || isInvalidDuration || isOutsideRun;
 
           return (
             <div
               key={load.id}
               onClick={() => onSelectLoad(index)}
               className={`p-3 rounded-lg transition cursor-pointer ${
-                isOverlapping
+                hasError
                   ? "bg-red-900/50 ring-2 ring-red-500"
                   : currentLoadIndex === index
                     ? "bg-blue-900 ring-2 ring-blue-500"
@@ -59,6 +66,16 @@ const LoadList: React.FC<LoadListProps> = ({
                   {isOverlapping && (
                     <span className="ml-2 text-xs text-red-400">
                       (Overlapping)
+                    </span>
+                  )}
+                  {isInvalidDuration && (
+                    <span className="ml-2 text-xs text-orange-400">
+                      (Invalid Duration)
+                    </span>
+                  )}
+                  {isOutsideRun && (
+                    <span className="ml-2 text-xs text-yellow-400">
+                      (Outside Run)
                     </span>
                   )}
                 </span>
