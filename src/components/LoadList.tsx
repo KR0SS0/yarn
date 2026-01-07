@@ -13,6 +13,8 @@ interface LoadListProps {
   onDeleteLoad: (index: number) => void;
   onJumpToTime: (time: number, index: number) => void;
   onSelectLoad: (index: number) => void;
+  isAutoLoadSelecting: boolean;
+  onAutoSelectLoad: () => void;
 }
 
 const LoadList: React.FC<LoadListProps> = ({
@@ -26,18 +28,41 @@ const LoadList: React.FC<LoadListProps> = ({
   onDeleteLoad,
   onJumpToTime,
   onSelectLoad,
+  isAutoLoadSelecting,
+  onAutoSelectLoad,
 }) => {
   return (
     <div className="bg-slate-800 rounded-lg shadow-2xl p-6 lg:col-span-1">
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-xl font-bold">Marked Loads</h2>
         {mode === "runner" && (
-          <button
-            onClick={onAddLoad}
-            className="px-4 py-2 bg-blue-600 rounded-lg hover:bg-blue-700 transition text-sm"
-          >
-            + Add Load
-          </button>
+          <div className="flex items-center gap-4">
+            {/* Pill Toggle */}
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-slate-400 uppercase">
+                Auto
+              </span>
+              <button
+                onClick={onAutoSelectLoad}
+                className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
+                  isAutoLoadSelecting ? "bg-green-500" : "bg-slate-600"
+                }`}
+              >
+                <span
+                  className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${
+                    isAutoLoadSelecting ? "translate-x-5" : "translate-x-1"
+                  }`}
+                />
+              </button>
+            </div>
+
+            <button
+              onClick={onAddLoad}
+              className="px-4 py-2 bg-blue-600 rounded-lg hover:bg-blue-700 transition text-sm font-semibold"
+            >
+              + Add Load
+            </button>
+          </div>
         )}
       </div>
 

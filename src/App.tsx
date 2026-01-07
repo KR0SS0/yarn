@@ -19,6 +19,8 @@ const App = () => {
   const [fps, setFps] = useState<number>(30);
   const [showFpsHelp, setShowFpsHelp] = useState(false);
 
+  const [isAutoLoadSelecting, setIsAutoLoadSelecting] = useState(true);
+  const toggleAutoLoadSelectMode = () => setIsAutoLoadSelecting(!isAutoLoadSelecting);
   const [loads, setLoads] = useState<Load[]>([]);
   const [currentLoadIndex, setCurrentLoadIndex] = useState(0);
 
@@ -48,7 +50,7 @@ const App = () => {
     return runEnd.time + runEnd.offset;
   }, [runEnd]);
 
-  // Comprehensive validation
+  // ** Comprehensive validation **
   const {
     overlappingIndices,
     invalidDurationIndices,
@@ -216,25 +218,56 @@ const App = () => {
     setUrlError("");
   };
 
-  const markLoadStart = () => {
+  const markLoadStart = () => handleMarkLoad("start");
+  const markLoadEnd = () => handleMarkLoad("end");
+
+  const handleMarkLoad = (type: "start" | "end") => {
     if (!ytPlayerRef.current?.getCurrentTime) return;
     const time = ytPlayerRef.current.getCurrentTime();
-    const updated = [...loads];
-    updated[currentLoadIndex].startTime = time;
+
+    // If no loads exist, create one first
+    let currentLoads = loads;
+    let activeIndex = currentLoadIndex;
+
+    if (loads.length === 0) {
+      const newLoad: Load = { id: Date.now(), startTime: null, endTime: null };
+      currentLoads = [newLoad];
+      activeIndex = 0;
+    }
+
+    // Apply the timestamp
+    const updated = [...currentLoads];
+    updated[activeIndex] = {
+      ...updated[activeIndex],
+      [type === "start" ? "startTime" : "endTime"]: time,
+    };
+
+    // Update state
     setLoads(updated);
+    if (loads.length === 0) setCurrentLoadIndex(0);
+
+    // Try to auto-advance if valid
+    tryAddNewLoad(updated, activeIndex);
   };
 
-  const markLoadEnd = () => {
-    if (!ytPlayerRef.current?.getCurrentTime) return;
-    const time = ytPlayerRef.current.getCurrentTime();
-    const updated = [...loads];
-    updated[currentLoadIndex].endTime = time;
-    setLoads(updated);
+  const tryAddNewLoad = (updatedLoads: Load[], index: number) => {
+    if (!isAutoLoadSelecting) return;
+
+    const isValid = isLoadValid(index, updatedLoads);
+    if (isValid) {
+      // We use a functional update to avoid closure staleness
+      const newLoad: Load = { id: Date.now(), startTime: null, endTime: null };
+      setLoads([...updatedLoads, newLoad]);
+      setCurrentLoadIndex(updatedLoads.length);
+    }
   };
 
   const addNewLoad = () => {
-    setLoads([...loads, { id: Date.now(), startTime: null, endTime: null }]);
-    setCurrentLoadIndex(loads.length);
+    const newLoad: Load = { id: Date.now(), startTime: null, endTime: null };
+    const updated = [...loads, newLoad];
+    setLoads(updated);
+    setCurrentLoadIndex(updated.length - 1);
+    return updated;
   };
 
   const deleteLoad = (index: number) => {
@@ -242,6 +275,38 @@ const App = () => {
     setLoads(updated);
     setCurrentLoadIndex(Math.max(0, updated.length - 1));
   };
+
+const isLoadValid = (index: number, allLoads: Load[]) => {
+  const load = allLoads[index];
+  if (load.startTime === null || load.endTime === null) return false;
+
+  // Check Duration
+  if (load.endTime <= load.startTime) return false;
+
+  // Check Run Boundaries (using the same logic as your useMemo)
+  if (
+    adjustedRunStart !== null &&
+    (load.startTime < adjustedRunStart || load.endTime > adjustedRunEnd!)
+  ) {
+    return false;
+  }
+
+  // Check Overlaps with ALL other loads
+  const hasOverlap = allLoads.some((otherLoad, otherIdx) => {
+    if (
+      index === otherIdx ||
+      otherLoad.startTime === null ||
+      otherLoad.endTime === null
+    )
+      return false;
+    return (
+      load.startTime! < otherLoad.endTime! &&
+      load.endTime! > otherLoad.startTime!
+    );
+  });
+
+  return !hasOverlap;
+};
 
   const jumpToTime = (time: number, index: number) => {
     ytPlayerRef.current?.seekTo?.(time, true);
@@ -428,6 +493,8 @@ const App = () => {
               onDeleteLoad={deleteLoad}
               onJumpToTime={jumpToTime}
               onSelectLoad={setCurrentLoadIndex}
+              onAutoSelectLoad={toggleAutoLoadSelectMode}
+              isAutoLoadSelecting={isAutoLoadSelecting}
             />
           </div>
         )}
