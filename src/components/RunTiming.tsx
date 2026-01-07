@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { RunMarker } from "../types";
 
 interface RunTimingProps {
@@ -6,6 +6,7 @@ interface RunTimingProps {
   setRunStart: (marker: RunMarker) => void;
   runEnd: RunMarker;
   setRunEnd: (marker: RunMarker) => void;
+  fps: number;
   runTimingOpen: boolean;
   setRunTimingOpen: (open: boolean) => void;
   onMarkRunStart: () => void;
@@ -17,107 +18,127 @@ const RunTiming: React.FC<RunTimingProps> = ({
   setRunStart,
   runEnd,
   setRunEnd,
+  fps,
   runTimingOpen,
   setRunTimingOpen,
   onMarkRunStart,
   onMarkRunEnd,
 }) => {
+  const [startFramesStr, setStartFramesStr] = useState(
+    Math.round(runStart.offset * fps).toString()
+  );
+  const [endFramesStr, setEndFramesStr] = useState(
+    Math.round(runEnd.offset * fps).toString()
+  );
+
+  // Sync local state if external offset changes
+  useEffect(() => {
+    setStartFramesStr(Math.round(runStart.offset * fps).toString());
+  }, [runStart.offset, fps]);
+
+  useEffect(() => {
+    setEndFramesStr(Math.round(runEnd.offset * fps).toString());
+  }, [runEnd.offset, fps]);
+
+  const framesToSecondsDisplay = (frames: number) => {
+    const seconds = frames / fps;
+    return `${seconds.toFixed(3)}s`;
+  };
+
+  const handleChangeFrames = (
+    value: string,
+    setter: (marker: RunMarker) => void,
+    marker: RunMarker,
+    setStr: React.Dispatch<React.SetStateAction<string>>
+  ) => {
+    setStr(value); // allow user to type freely
+    let frames = parseInt(value, 10);
+    if (isNaN(frames)) frames = 0; // empty field defaults to 0
+    setter({ ...marker, offset: frames / fps });
+  };
+
   return (
     <div className="mb-4 p-3 bg-slate-700 rounded-lg">
       <h2
         onClick={() => setRunTimingOpen(!runTimingOpen)}
         className="text-sm font-bold mb-2 cursor-pointer select-none flex justify-between items-center"
       >
-        Run Timing
+        Start / End Run Timing
         <span className="text-slate-400">{runTimingOpen ? "▾" : "▸"}</span>
       </h2>
 
       {runTimingOpen && (
         <>
-          {(runStart.time === null || runEnd.time === null) && (
-            <div className="flex gap-2 mb-2">
-              <button
-                onClick={onMarkRunStart}
-                className="flex-1 px-3 py-2 bg-green-700 rounded hover:bg-green-800 transition"
-              >
-                Mark Run Start
-              </button>
-              <button
-                onClick={onMarkRunEnd}
-                className="flex-1 px-3 py-2 bg-red-700 rounded hover:bg-red-800 transition"
-              >
-                Mark Run End
-              </button>
-            </div>
-          )}
+          <div className="flex gap-2 mb-3">
+            <button
+              onClick={onMarkRunStart}
+              className="flex-1 px-3 py-2 bg-green-700 rounded hover:bg-green-800 transition"
+            >
+              {runStart.time === null ? "Mark Run Start" : "Re-mark Run Start"}
+            </button>
+            <button
+              onClick={onMarkRunEnd}
+              className="flex-1 px-3 py-2 bg-red-700 rounded hover:bg-red-800 transition"
+            >
+              {runEnd.time === null ? "Mark Run End" : "Re-mark Run End"}
+            </button>
+          </div>
 
-          <div className="text-xs text-slate-300 space-y-2">
+          <div className="text-xs text-slate-300 space-y-3">
+            {/* START */}
             <div>
               <strong>Start:</strong>{" "}
               {runStart.time !== null ? (
                 <>
+                  <span className="ml-1">{runStart.time.toFixed(3)}s</span>
+                  <span className="ml-3 text-slate-400">Offset (frames):</span>
                   <input
                     type="number"
-                    step="0.001"
-                    value={runStart.time}
+                    step={1}
+                    value={startFramesStr}
                     onChange={(e) =>
-                      setRunStart({
-                        ...runStart,
-                        time: Number(e.target.value),
-                      })
-                    }
-                    className="w-24 bg-slate-900 border border-slate-600 rounded px-1 ml-1"
-                  />
-                  s<span className="ml-2 text-slate-400">Offset:</span>
-                  <input
-                    type="number"
-                    step="0.001"
-                    value={runStart.offset}
-                    onChange={(e) =>
-                      setRunStart({
-                        ...runStart,
-                        offset: Number(e.target.value),
-                      })
+                      handleChangeFrames(
+                        e.target.value,
+                        setRunStart,
+                        runStart,
+                        setStartFramesStr
+                      )
                     }
                     className="w-20 bg-slate-900 border border-slate-600 rounded px-1 ml-1"
                   />
-                  s
+                  <span className="ml-2 text-slate-400">
+                    ({framesToSecondsDisplay(parseInt(startFramesStr) || 0)})
+                  </span>
                 </>
               ) : (
                 "Not set"
               )}
             </div>
 
+            {/* END */}
             <div>
               <strong>End:</strong>{" "}
               {runEnd.time !== null ? (
                 <>
+                  <span className="ml-1">{runEnd.time.toFixed(3)}s</span>
+                  <span className="ml-3 text-slate-400">Offset (frames):</span>
                   <input
                     type="number"
-                    step="0.001"
-                    value={runEnd.time}
+                    step={1}
+                    value={endFramesStr}
                     onChange={(e) =>
-                      setRunEnd({
-                        ...runEnd,
-                        time: Number(e.target.value),
-                      })
-                    }
-                    className="w-24 bg-slate-900 border border-slate-600 rounded px-1 ml-1"
-                  />
-                  s<span className="ml-2 text-slate-400">Offset:</span>
-                  <input
-                    type="number"
-                    step="0.001"
-                    value={runEnd.offset}
-                    onChange={(e) =>
-                      setRunEnd({
-                        ...runEnd,
-                        offset: Number(e.target.value),
-                      })
+                      handleChangeFrames(
+                        e.target.value,
+                        setRunEnd,
+                        runEnd,
+                        setEndFramesStr
+                      )
                     }
                     className="w-20 bg-slate-900 border border-slate-600 rounded px-1 ml-1"
                   />
-                  s
+                  <span className="ml-2 text-slate-400">
+                    ({framesToSecondsDisplay(parseInt(endFramesStr) || 0)})
+                  </span>
                 </>
               ) : (
                 "Not set"

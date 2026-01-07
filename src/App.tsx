@@ -20,15 +20,15 @@ const App = () => {
 
   const [loads, setLoads] = useState<Load[]>([]);
   const [currentLoadIndex, setCurrentLoadIndex] = useState(0);
+
   const playerRef = useRef<HTMLDivElement | null>(null);
   const ytPlayerRef = useRef<any>(null);
-  const player = ytPlayerRef.current;
-
 
   const [runStart, setRunStart] = useState<RunMarker>({
     time: null,
     offset: 0,
   });
+
   const [runEnd, setRunEnd] = useState<RunMarker>({
     time: null,
     offset: 0,
@@ -49,7 +49,7 @@ const App = () => {
   }, [loads, fps]);
 
   const handleLoadVideo = () => {
-    // Empty input → default test video
+    // Empty input = default test video
     if (!videoUrl.trim()) {
       setVideoId(DEFAULT_TEST_VIDEO_ID);
       setUrlError("");
@@ -69,16 +69,16 @@ const App = () => {
   };
 
   const markLoadStart = () => {
-    if (!player?.getCurrentTime) return;
-    const time = player.getCurrentTime();
+    if (!ytPlayerRef.current?.getCurrentTime) return;
+    const time = ytPlayerRef.current.getCurrentTime();
     const updated = [...loads];
     updated[currentLoadIndex].startTime = time;
     setLoads(updated);
   };
 
   const markLoadEnd = () => {
-    if (!player?.getCurrentTime) return;
-    const time = player.getCurrentTime();
+    if (!ytPlayerRef.current?.getCurrentTime) return;
+    const time = ytPlayerRef.current.getCurrentTime();
     const updated = [...loads];
     updated[currentLoadIndex].endTime = time;
     setLoads(updated);
@@ -96,18 +96,18 @@ const App = () => {
   };
 
   const jumpToTime = (time: number, index: number) => {
-    player?.seekTo?.(time, true);
+    ytPlayerRef.current?.seekTo?.(time, true);
     setCurrentLoadIndex(index);
   };
 
   const markRunStart = () => {
-    if (!player?.getCurrentTime) return;
-    setRunStart({ ...runStart, time: player.getCurrentTime() });
+    if (!ytPlayerRef.current?.getCurrentTime) return;
+    setRunStart({ ...runStart, time: ytPlayerRef.current.getCurrentTime() });
   };
 
   const markRunEnd = () => {
-    if (!player?.getCurrentTime) return;
-    setRunEnd({ ...runEnd, time: player.getCurrentTime() });
+    if (!ytPlayerRef.current?.getCurrentTime) return;
+    setRunEnd({ ...runEnd, time: ytPlayerRef.current.getCurrentTime() });
   };
 
   const adjustedRunStartFrames = useMemo(() => {
@@ -189,13 +189,18 @@ const App = () => {
           onLoadVideo={handleLoadVideo}
         />
 
-        <TimingSummary rtaFrames={rtaFrames} lrtFrames={lrtFrames} fps={fps} />
+        <TimingSummary
+          rtaFrames={rtaFrames}
+          lrtFrames={lrtFrames}
+          fps={fps}
+        />
 
         {videoId && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <VideoPlayer
               playerRef={playerRef}
               mode={mode}
+              fps={fps}
               runStart={runStart}
               setRunStart={setRunStart}
               runEnd={runEnd}

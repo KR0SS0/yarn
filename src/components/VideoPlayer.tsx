@@ -5,6 +5,7 @@ import { RunMarker } from "../types";
 interface VideoPlayerProps {
   playerRef: React.RefObject<HTMLDivElement | null>;
   mode: "runner" | "verifier";
+  fps: number;
   runStart: RunMarker;
   setRunStart: (marker: RunMarker) => void;
   runEnd: RunMarker;
@@ -20,6 +21,7 @@ interface VideoPlayerProps {
 const VideoPlayer: React.FC<VideoPlayerProps> = ({
   playerRef,
   mode,
+  fps,
   runStart,
   setRunStart,
   runEnd,
@@ -41,6 +43,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
       {mode === "runner" && (
         <>
           <RunTiming
+            fps={fps}
             runStart={runStart}
             setRunStart={setRunStart}
             runEnd={runEnd}
