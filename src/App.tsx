@@ -354,6 +354,8 @@ const playerRef = useRef<HTMLDivElement | null>(null);
               onMarkLoadStart={markLoadStart}
               onMarkLoadEnd={markLoadEnd}
               onJumpToTime={(time) => ytPlayerRef.current?.seekTo?.(time, true)}
+              currentLoadIndex={currentLoadIndex}
+              loads={loads}
             />
 
             <LoadList

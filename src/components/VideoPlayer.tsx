@@ -1,6 +1,6 @@
 import React from "react";
 import RunTiming from "./RunTiming";
-import { RunMarker } from "../types";
+import { RunMarker, Load } from "../types";
 
 interface VideoPlayerProps {
   playerRef: React.RefObject<HTMLDivElement | null>;
@@ -17,6 +17,8 @@ interface VideoPlayerProps {
   onMarkLoadStart: () => void;
   onMarkLoadEnd: () => void;
   onJumpToTime: (time: number) => void;
+  currentLoadIndex: number;
+  loads: Load[];
 }
 
 const VideoPlayer: React.FC<VideoPlayerProps> = ({
@@ -34,6 +36,8 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   onMarkLoadStart,
   onMarkLoadEnd,
   onJumpToTime,
+  currentLoadIndex,
+  loads,
 }) => {
   const runTimingSet = runStart.time !== null && runEnd.time !== null;
 
@@ -59,8 +63,30 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
               onMarkRunStart={onMarkRunStart}
               onMarkRunEnd={onMarkRunEnd}
               onJumpToTime={onJumpToTime}
+              currentLoadIndex={currentLoadIndex}
+              loads={loads}
             />
           )}
+
+          {/* Current load indicator */}
+          <div className="mb-2 text-sm text-slate-300">
+            {loads.length === 0 ? (
+              <span className="italic text-slate-500">No loads added yet</span>
+            ) : (
+              <>
+                Marking{" "}
+                <span className="font-semibold text-white">
+                  Load #{currentLoadIndex + 1}
+                </span>
+                {loads[currentLoadIndex]?.startTime !== null && (
+                  <span className="ml-2 text-green-400">Start set</span>
+                )}
+                {loads[currentLoadIndex]?.endTime !== null && (
+                  <span className="ml-2 text-red-400">End set</span>
+                )}
+              </>
+            )}
+          </div>
 
           {/* Load marking buttons with tooltip */}
           <div className="flex gap-2 relative group">
@@ -101,6 +127,8 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
                 onMarkRunStart={onMarkRunStart}
                 onMarkRunEnd={onMarkRunEnd}
                 onJumpToTime={onJumpToTime}
+                currentLoadIndex={currentLoadIndex}
+                loads={loads}
               />
             </div>
           )}

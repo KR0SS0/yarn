@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { RunMarker } from "../types";
+import { RunMarker, Load } from "../types";
 import { Eye, EyeOff } from "lucide-react";
 
 interface RunTimingProps {
@@ -13,6 +13,8 @@ interface RunTimingProps {
   onMarkRunStart: () => void;
   onMarkRunEnd: () => void;
   onJumpToTime: (time: number) => void;
+  currentLoadIndex: number;
+  loads: Load[];
 }
 
 const RunTiming: React.FC<RunTimingProps> = ({
