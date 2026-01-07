@@ -19,6 +19,9 @@ interface VideoPlayerProps {
   onJumpToTime: (time: number) => void;
   currentLoadIndex: number;
   loads: Load[];
+  overlappingLoadIndices: Set<number>;
+  invalidDurationIndices: Set<number>;
+  outsideRunIndices: Set<number>;
 }
 
 const VideoPlayer: React.FC<VideoPlayerProps> = ({
@@ -38,8 +41,17 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   onJumpToTime,
   currentLoadIndex,
   loads,
+  overlappingLoadIndices,
+  invalidDurationIndices,
+  outsideRunIndices,
 }) => {
   const runTimingSet = runStart.time !== null && runEnd.time !== null;
+  const activeLoad = loads[currentLoadIndex];
+
+  // Validation status for current load
+  const isOverlapping = overlappingLoadIndices.has(currentLoadIndex);
+  const isInvalidDuration = invalidDurationIndices.has(currentLoadIndex);
+  const isOutsideRun = outsideRunIndices.has(currentLoadIndex);
 
   return (
     <div className="bg-slate-800 rounded-lg shadow-2xl p-6 lg:col-span-2 flex flex-col">
@@ -69,40 +81,59 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
           )}
 
           {/* Current load indicator */}
-          <div className="mb-2 text-sm text-slate-300">
+          <div className="mb-2 flex items-center gap-2 text-sm">
             {loads.length === 0 ? (
               <span className="italic text-slate-500">No loads added yet</span>
             ) : (
               <>
-                Marking{" "}
-                <span className="font-semibold text-white">
-                  Load #{currentLoadIndex + 1}
+                <span className="text-slate-300 mr-1">
+                  Marking{" "}
+                  <span className="font-semibold text-white">
+                    Load #{currentLoadIndex + 1}
+                  </span>
                 </span>
-                {loads[currentLoadIndex]?.startTime !== null && (
-                  <span className="ml-2 text-green-400">Start set</span>
-                )}
-                {loads[currentLoadIndex]?.endTime !== null && (
-                  <span className="ml-2 text-red-400">End set</span>
-                )}
+
+                {/* Error Badges */}
+                <div className="flex gap-2">
+                  {isOverlapping && (
+                    <span className="px-2 py-0.5 rounded bg-red-900/50 text-red-400 text-xs border border-red-500/50">
+                      Overlapping
+                    </span>
+                  )}
+                  {isInvalidDuration && (
+                    <span className="px-2 py-0.5 rounded bg-orange-900/50 text-orange-400 text-xs border border-orange-500/50">
+                      Invalid Duration
+                    </span>
+                  )}
+                  {isOutsideRun && (
+                    <span className="px-2 py-0.5 rounded bg-yellow-900/50 text-yellow-400 text-xs border border-yellow-500/50">
+                      Outside Run
+                    </span>
+                  )}
+                </div>
               </>
             )}
           </div>
 
-          {/* Load marking buttons with tooltip */}
+          {/* Load marking buttons */}
           <div className="flex gap-2 relative group">
             <button
               onClick={onMarkLoadStart}
               disabled={!runTimingSet}
               className="flex-1 px-4 py-2 bg-green-600 rounded-lg hover:bg-green-700 transition disabled:bg-slate-600 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              Mark Load Start
+              {activeLoad && activeLoad.startTime !== null
+                ? "Re-mark Load Start"
+                : "Mark Load Start"}
             </button>
             <button
               onClick={onMarkLoadEnd}
               disabled={!runTimingSet}
               className="flex-1 px-4 py-2 bg-red-600 rounded-lg hover:bg-red-700 transition disabled:bg-slate-600 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              Mark Load End
+              {activeLoad && activeLoad.endTime !== null
+                ? "Re-mark Load End"
+                : "Mark Load End"}
             </button>
 
             {/* Tooltip when buttons are disabled */}

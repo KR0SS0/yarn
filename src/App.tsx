@@ -480,6 +480,9 @@ const isLoadValid = (index: number, allLoads: Load[]) => {
               onJumpToTime={(time) => ytPlayerRef.current?.seekTo?.(time, true)}
               currentLoadIndex={currentLoadIndex}
               loads={loads}
+              overlappingLoadIndices={overlappingIndices}
+              invalidDurationIndices={invalidDurationIndices}
+              outsideRunIndices={outsideRunIndices} 
             />
 
             <LoadList
