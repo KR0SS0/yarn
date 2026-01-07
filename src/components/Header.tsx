@@ -1,11 +1,13 @@
 import React from "react";
+import { Download } from "lucide-react";
 
 interface HeaderProps {
   mode: "runner" | "verifier";
   setMode: (mode: "runner" | "verifier") => void;
+  onDownload: () => void;
 }
 
-const Header: React.FC<HeaderProps> = ({ mode, setMode }) => {
+const Header: React.FC<HeaderProps> = ({ mode, setMode, onDownload }) => {
   return (
     <div className="bg-slate-800 rounded-lg shadow-2xl p-6 mb-6">
       <h1 className="text-3xl font-bold mb-2 bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
@@ -33,6 +35,16 @@ const Header: React.FC<HeaderProps> = ({ mode, setMode }) => {
           }`}
         >
           Verifier Mode
+        </button>
+        <div className="h-8 w-[1px] bg-slate-700 mx-2 hidden md:block" />
+
+        <button
+          onClick={onDownload}
+          className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-semibold transition shadow-lg active:transform active:scale-95"
+          title="Export session to JSON"
+        >
+          <Download size={18} />
+          <span>Export</span>
         </button>
       </div>
     </div>

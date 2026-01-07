@@ -20,7 +20,8 @@ const App = () => {
   const [showFpsHelp, setShowFpsHelp] = useState(false);
 
   const [isAutoLoadSelecting, setIsAutoLoadSelecting] = useState(true);
-  const toggleAutoLoadSelectMode = () => setIsAutoLoadSelecting(!isAutoLoadSelecting);
+  const toggleAutoLoadSelectMode = () =>
+    setIsAutoLoadSelecting(!isAutoLoadSelecting);
   const [loads, setLoads] = useState<Load[]>([]);
   const [currentLoadIndex, setCurrentLoadIndex] = useState(0);
 
@@ -276,37 +277,37 @@ const App = () => {
     setCurrentLoadIndex(Math.max(0, updated.length - 1));
   };
 
-const isLoadValid = (index: number, allLoads: Load[]) => {
-  const load = allLoads[index];
-  if (load.startTime === null || load.endTime === null) return false;
+  const isLoadValid = (index: number, allLoads: Load[]) => {
+    const load = allLoads[index];
+    if (load.startTime === null || load.endTime === null) return false;
 
-  // Check Duration
-  if (load.endTime <= load.startTime) return false;
+    // Check Duration
+    if (load.endTime <= load.startTime) return false;
 
-  // Check Run Boundaries (using the same logic as your useMemo)
-  if (
-    adjustedRunStart !== null &&
-    (load.startTime < adjustedRunStart || load.endTime > adjustedRunEnd!)
-  ) {
-    return false;
-  }
-
-  // Check Overlaps with ALL other loads
-  const hasOverlap = allLoads.some((otherLoad, otherIdx) => {
+    // Check Run Boundaries (using the same logic as your useMemo)
     if (
-      index === otherIdx ||
-      otherLoad.startTime === null ||
-      otherLoad.endTime === null
-    )
+      adjustedRunStart !== null &&
+      (load.startTime < adjustedRunStart || load.endTime > adjustedRunEnd!)
+    ) {
       return false;
-    return (
-      load.startTime! < otherLoad.endTime! &&
-      load.endTime! > otherLoad.startTime!
-    );
-  });
+    }
 
-  return !hasOverlap;
-};
+    // Check Overlaps with ALL other loads
+    const hasOverlap = allLoads.some((otherLoad, otherIdx) => {
+      if (
+        index === otherIdx ||
+        otherLoad.startTime === null ||
+        otherLoad.endTime === null
+      )
+        return false;
+      return (
+        load.startTime! < otherLoad.endTime! &&
+        load.endTime! > otherLoad.startTime!
+      );
+    });
+
+    return !hasOverlap;
+  };
 
   const jumpToTime = (time: number, index: number) => {
     ytPlayerRef.current?.seekTo?.(time, true);
@@ -348,6 +349,40 @@ const isLoadValid = (index: number, allLoads: Load[]) => {
     if (rtaFrames === null) return null;
     return rtaFrames - totalLoadFrames;
   }, [rtaFrames, totalLoadFrames]);
+
+  // Save all data to JSON
+  const exportToJson = () => {
+    const data = {
+      videoId: videoId,
+      fps: fps,
+      runStart: runStart,
+      runEnd: runEnd,
+      loads: loads,
+      exportedAt: new Date().toISOString(),
+      // Include the final calculated times for convenience
+      summary: {
+        totalLoadFrames,
+        rtaFrames,
+        lrtFrames,
+      },
+    };
+
+    // Create a blob and a download link
+    const fileName = `timing-data-${videoId || "export"}.json`;
+    const json = JSON.stringify(data, null, 2);
+    const blob = new Blob([json], { type: "application/json" });
+    const href = URL.createObjectURL(blob);
+
+    // Trigger the download
+    const link = document.createElement("a");
+    link.href = href;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+
+    document.body.removeChild(link);
+    URL.revokeObjectURL(href);
+  };
 
   useEffect(() => {
     const tag = document.createElement("script");
@@ -443,7 +478,7 @@ const isLoadValid = (index: number, allLoads: Load[]) => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 text-white p-6">
       <div className="max-w-7xl mx-auto">
-        <Header mode={mode} setMode={setMode} />
+        <Header mode={mode} setMode={setMode} onDownload={exportToJson} />
 
         <VideoInput
           videoUrl={videoUrl}
@@ -482,7 +517,7 @@ const isLoadValid = (index: number, allLoads: Load[]) => {
               loads={loads}
               overlappingLoadIndices={overlappingIndices}
               invalidDurationIndices={invalidDurationIndices}
-              outsideRunIndices={outsideRunIndices} 
+              outsideRunIndices={outsideRunIndices}
             />
 
             <LoadList
