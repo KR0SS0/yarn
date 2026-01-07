@@ -22,7 +22,7 @@ const App = () => {
   const [loads, setLoads] = useState<Load[]>([]);
   const [currentLoadIndex, setCurrentLoadIndex] = useState(0);
 
-const playerRef = useRef<HTMLDivElement | null>(null);
+  const playerRef = useRef<HTMLDivElement | null>(null);
   const ytPlayerRef = useRef<any>(null);
 
   const [runStart, setRunStart] = useState<RunMarker>({
@@ -49,141 +49,141 @@ const playerRef = useRef<HTMLDivElement | null>(null);
   }, [runEnd]);
 
   // Comprehensive validation
- const {
-   overlappingIndices,
-   invalidDurationIndices,
-   outsideRunIndices,
-   warnings,
- } = useMemo(() => {
-   const overlapping = new Set<number>();
-   const invalidDuration = new Set<number>();
-   const outsideRun = new Set<number>();
-   const validationWarnings: ValidationWarning[] = [];
+  const {
+    overlappingIndices,
+    invalidDurationIndices,
+    outsideRunIndices,
+    warnings,
+  } = useMemo(() => {
+    const overlapping = new Set<number>();
+    const invalidDuration = new Set<number>();
+    const outsideRun = new Set<number>();
+    const validationWarnings: ValidationWarning[] = [];
 
-   // Check if run end is before run start
-   if (adjustedRunStart !== null && adjustedRunEnd !== null) {
-     if (adjustedRunEnd <= adjustedRunStart) {
-       validationWarnings.push({
-         type: "error",
-         message: `The run end (${adjustedRunEnd.toFixed(3)}s) cannot be earlier than or equal to the run start (${adjustedRunStart.toFixed(3)}s).`,
-         affectedLoads: [],
-       });
-     }
-   }
+    // Check if run end is before run start
+    if (adjustedRunStart !== null && adjustedRunEnd !== null) {
+      if (adjustedRunEnd <= adjustedRunStart) {
+        validationWarnings.push({
+          type: "error",
+          message: `The run end (${adjustedRunEnd.toFixed(3)}s) cannot be earlier than or equal to the run start (${adjustedRunStart.toFixed(3)}s).`,
+          affectedLoads: [],
+        });
+      }
+    }
 
-   const completeLoads = loads
-     .map((load, index) => ({ load, index }))
-     .filter(({ load }) => load.startTime !== null && load.endTime !== null);
+    const completeLoads = loads
+      .map((load, index) => ({ load, index }))
+      .filter(({ load }) => load.startTime !== null && load.endTime !== null);
 
-   // Check for invalid durations (0 or negative)
-   completeLoads.forEach(({ load, index }) => {
-     const duration = load.endTime! - load.startTime!;
-     if (duration <= 0) {
-       invalidDuration.add(index);
-       validationWarnings.push({
-         type: "invalid-duration",
-         message: `Load #${index + 1} has ${
-           duration === 0 ? "zero" : "negative"
-         } duration (${duration.toFixed(
-           3
-         )}s). End time must be after start time.`,
-         affectedLoads: [index],
-       });
-     }
-   });
+    // Check for invalid durations (0 or negative)
+    completeLoads.forEach(({ load, index }) => {
+      const duration = load.endTime! - load.startTime!;
+      if (duration <= 0) {
+        invalidDuration.add(index);
+        validationWarnings.push({
+          type: "invalid-duration",
+          message: `Load #${index + 1} has ${
+            duration === 0 ? "zero" : "negative"
+          } duration (${duration.toFixed(
+            3
+          )}s). End time must be after start time.`,
+          affectedLoads: [index],
+        });
+      }
+    });
 
-   // Check if loads are outside run boundaries
-   if (adjustedRunStart !== null && adjustedRunEnd !== null) {
-     completeLoads.forEach(({ load, index }) => {
-       const start = load.startTime!;
-       const end = load.endTime!;
+    // Check if loads are outside run boundaries
+    if (adjustedRunStart !== null && adjustedRunEnd !== null) {
+      completeLoads.forEach(({ load, index }) => {
+        const start = load.startTime!;
+        const end = load.endTime!;
 
-       const beforeRun = end <= adjustedRunStart;
-       const afterRun = start >= adjustedRunEnd;
-       const partiallyOutside =
-         start < adjustedRunStart || end > adjustedRunEnd;
+        const beforeRun = end <= adjustedRunStart;
+        const afterRun = start >= adjustedRunEnd;
+        const partiallyOutside =
+          start < adjustedRunStart || end > adjustedRunEnd;
 
-       if (beforeRun || afterRun || partiallyOutside) {
-         outsideRun.add(index);
-         let message = "";
+        if (beforeRun || afterRun || partiallyOutside) {
+          outsideRun.add(index);
+          let message = "";
 
-         if (beforeRun) {
-           message = `Load #${
-             index + 1
-           } is entirely before the run start (${adjustedRunStart.toFixed(
-             3
-           )}s).`;
-         } else if (afterRun) {
-           message = `Load #${
-             index + 1
-           } is entirely after the run end (${adjustedRunEnd.toFixed(3)}s).`;
-         } else if (start < adjustedRunStart) {
-           message = `Load #${
-             index + 1
-           } starts before the run start (${adjustedRunStart.toFixed(3)}s).`;
-         } else if (end > adjustedRunEnd) {
-           message = `Load #${
-             index + 1
-           } ends after the run end (${adjustedRunEnd.toFixed(3)}s).`;
-         }
+          if (beforeRun) {
+            message = `Load #${
+              index + 1
+            } is entirely before the run start (${adjustedRunStart.toFixed(
+              3
+            )}s).`;
+          } else if (afterRun) {
+            message = `Load #${
+              index + 1
+            } is entirely after the run end (${adjustedRunEnd.toFixed(3)}s).`;
+          } else if (start < adjustedRunStart) {
+            message = `Load #${
+              index + 1
+            } starts before the run start (${adjustedRunStart.toFixed(3)}s).`;
+          } else if (end > adjustedRunEnd) {
+            message = `Load #${
+              index + 1
+            } ends after the run end (${adjustedRunEnd.toFixed(3)}s).`;
+          }
 
-         validationWarnings.push({
-           type: "outside-run",
-           message,
-           affectedLoads: [index],
-         });
-       }
-     });
-   }
+          validationWarnings.push({
+            type: "outside-run",
+            message,
+            affectedLoads: [index],
+          });
+        }
+      });
+    }
 
-   // Check for overlaps
-   for (let i = 0; i < completeLoads.length; i++) {
-     for (let j = i + 1; j < completeLoads.length; j++) {
-       const load1 = completeLoads[i].load;
-       const load2 = completeLoads[j].load;
-       const idx1 = completeLoads[i].index;
-       const idx2 = completeLoads[j].index;
+    // Check for overlaps
+    for (let i = 0; i < completeLoads.length; i++) {
+      for (let j = i + 1; j < completeLoads.length; j++) {
+        const load1 = completeLoads[i].load;
+        const load2 = completeLoads[j].load;
+        const idx1 = completeLoads[i].index;
+        const idx2 = completeLoads[j].index;
 
-       const start1 = load1.startTime!;
-       const end1 = load1.endTime!;
-       const start2 = load2.startTime!;
-       const end2 = load2.endTime!;
+        const start1 = load1.startTime!;
+        const end1 = load1.endTime!;
+        const start2 = load2.startTime!;
+        const end2 = load2.endTime!;
 
-       const hasOverlap =
-         (start1 <= start2 && end1 > start2) ||
-         (start2 <= start1 && end2 > start1);
+        const hasOverlap =
+          (start1 <= start2 && end1 > start2) ||
+          (start2 <= start1 && end2 > start1);
 
-       if (hasOverlap) {
-         overlapping.add(idx1);
-         overlapping.add(idx2);
+        if (hasOverlap) {
+          overlapping.add(idx1);
+          overlapping.add(idx2);
 
-         const existingWarning = validationWarnings.find(
-           (w) =>
-             w.type === "overlap" &&
-             w.affectedLoads.includes(idx1) &&
-             w.affectedLoads.includes(idx2)
-         );
+          const existingWarning = validationWarnings.find(
+            (w) =>
+              w.type === "overlap" &&
+              w.affectedLoads.includes(idx1) &&
+              w.affectedLoads.includes(idx2)
+          );
 
-         if (!existingWarning) {
-           validationWarnings.push({
-             type: "overlap",
-             message: `Load #${idx1 + 1} and Load #${
-               idx2 + 1
-             } have overlapping time ranges. Please adjust the timestamps.`,
-             affectedLoads: [idx1, idx2],
-           });
-         }
-       }
-     }
-   }
+          if (!existingWarning) {
+            validationWarnings.push({
+              type: "overlap",
+              message: `Load #${idx1 + 1} and Load #${
+                idx2 + 1
+              } have overlapping time ranges. Please adjust the timestamps.`,
+              affectedLoads: [idx1, idx2],
+            });
+          }
+        }
+      }
+    }
 
-   return {
-     overlappingIndices: overlapping,
-     invalidDurationIndices: invalidDuration,
-     outsideRunIndices: outsideRun,
-     warnings: validationWarnings,
-   };
- }, [loads, adjustedRunStart, adjustedRunEnd]);
+    return {
+      overlappingIndices: overlapping,
+      invalidDurationIndices: invalidDuration,
+      outsideRunIndices: outsideRun,
+      warnings: validationWarnings,
+    };
+  }, [loads, adjustedRunStart, adjustedRunEnd]);
 
   // Total load time in frames
   const totalLoadFrames = useMemo(() => {
@@ -289,6 +289,65 @@ const playerRef = useRef<HTMLDivElement | null>(null);
     tag.src = "https://www.youtube.com/iframe_api";
     document.body.appendChild(tag);
   }, []);
+
+  // Input consumption
+  useEffect(() => {
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      // Don't trigger if the user is typing in an input or textarea
+      const activeElem = document.activeElement;
+      const isTyping =
+        activeElem?.tagName === "INPUT" || activeElem?.tagName === "TEXTAREA";
+
+      // Allow Space to work even if focused on a button, but NOT if typing in an input
+      if (isTyping) return;
+
+      if (!ytPlayerRef.current) return;
+
+      switch (e.key) {
+        case " ": // Space to Toggle Play/Pause
+          e.preventDefault(); // Prevent page scroll
+          const state = ytPlayerRef.current.getPlayerState();
+          if (state === 1) ytPlayerRef.current.pauseVideo();
+          else ytPlayerRef.current.playVideo();
+          break;
+
+        case "ArrowLeft": // Seek Back 5s
+          e.preventDefault();
+          ytPlayerRef.current.seekTo(
+            ytPlayerRef.current.getCurrentTime() - 5,
+            true
+          );
+          break;
+
+        case "ArrowRight": // Seek Forward 5s
+          e.preventDefault();
+          ytPlayerRef.current.seekTo(
+            ytPlayerRef.current.getCurrentTime() + 5,
+            true
+          );
+          break;
+
+        case ",": // Frame Back (1/FPS)
+          ytPlayerRef.current.pauseVideo();
+          ytPlayerRef.current.seekTo(
+            ytPlayerRef.current.getCurrentTime() - 1 / fps,
+            true
+          );
+          break;
+
+        case ".": // Frame Forward (1/FPS)
+          ytPlayerRef.current.pauseVideo();
+          ytPlayerRef.current.seekTo(
+            ytPlayerRef.current.getCurrentTime() + 1 / fps,
+            true
+          );
+          break;
+      }
+    };
+
+    window.addEventListener("keydown", handleGlobalKeyDown);
+    return () => window.removeEventListener("keydown", handleGlobalKeyDown);
+  }, [fps]); // Re-bind if FPS changes to keep frame stepping accurate
 
   useEffect(() => {
     if (!videoId || !(window as any).YT) return;
