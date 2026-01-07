@@ -39,21 +39,30 @@ const LoadList: React.FC<LoadListProps> = ({
           <div className="flex items-center gap-4">
             {/* Pill Toggle */}
             <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-slate-400 uppercase">
-                Auto
-              </span>
-              <button
-                onClick={onAutoSelectLoad}
-                className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
-                  isAutoLoadSelecting ? "bg-green-500" : "bg-slate-600"
-                }`}
-              >
-                <span
-                  className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${
-                    isAutoLoadSelecting ? "translate-x-5" : "translate-x-1"
-                  }`}
-                />
-              </button>
+              <div className="relative group">
+                <div className="flex items-center gap-2 cursor-help">
+                  <span className="text-xs font-bold text-slate-400 uppercase">
+                    Auto
+                  </span>
+                  <button
+                    onClick={onAutoSelectLoad}
+                    className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
+                      isAutoLoadSelecting ? "bg-green-500" : "bg-slate-600"
+                    }`}
+                  >
+                    <span
+                      className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${
+                        isAutoLoadSelecting ? "translate-x-5" : "translate-x-1"
+                      }`}
+                    />
+                  </button>
+                </div>
+
+                {/* Tooltip */}
+                <div className="absolute left-1/2 -translate-x-1/2  bottom-full mb-1 hidden group-hover:block bg-black text-white text-xs rounded px-2 py-1 z-50 w-max max-w-xs border border-slate-700 shadow-xl">
+                  Auto-advance to next load on completion.
+                </div>
+              </div>
             </div>
 
             <button
