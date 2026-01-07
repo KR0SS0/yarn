@@ -16,6 +16,7 @@ interface VideoPlayerProps {
   onMarkRunEnd: () => void;
   onMarkLoadStart: () => void;
   onMarkLoadEnd: () => void;
+  onJumpToTime: (time: number) => void;
 }
 
 const VideoPlayer: React.FC<VideoPlayerProps> = ({
@@ -32,6 +33,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   onMarkRunEnd,
   onMarkLoadStart,
   onMarkLoadEnd,
+  onJumpToTime,
 }) => {
   const runTimingSet = runStart.time !== null && runEnd.time !== null;
 
@@ -56,6 +58,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
               setRunTimingOpen={setRunTimingOpen}
               onMarkRunStart={onMarkRunStart}
               onMarkRunEnd={onMarkRunEnd}
+              onJumpToTime={onJumpToTime}
             />
           )}
 
@@ -97,6 +100,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
                 setRunTimingOpen={setRunTimingOpen}
                 onMarkRunStart={onMarkRunStart}
                 onMarkRunEnd={onMarkRunEnd}
+                onJumpToTime={onJumpToTime}
               />
             </div>
           )}

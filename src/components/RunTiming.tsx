@@ -12,6 +12,7 @@ interface RunTimingProps {
   setRunTimingOpen: (open: boolean) => void;
   onMarkRunStart: () => void;
   onMarkRunEnd: () => void;
+  onJumpToTime: (time: number) => void;
 }
 
 const RunTiming: React.FC<RunTimingProps> = ({
@@ -24,6 +25,7 @@ const RunTiming: React.FC<RunTimingProps> = ({
   setRunTimingOpen,
   onMarkRunStart,
   onMarkRunEnd,
+  onJumpToTime,
 }) => {
   const [startFramesStr, setStartFramesStr] = useState(
     Math.round(runStart.offset * fps).toString()
@@ -100,7 +102,15 @@ const RunTiming: React.FC<RunTimingProps> = ({
               <strong>Start:</strong>{" "}
               {runStart.time !== null ? (
                 <>
-                  <span className="ml-1">{runStart.time.toFixed(3)}s</span>
+                  {/* Raw Time Jump */}
+                  <button
+                    onClick={() => onJumpToTime(runStart.time!)}
+                    className="ml-1 text-blue-400 hover:underline hover:text-blue-300 transition"
+                    title="Jump to raw start"
+                  >
+                    {runStart.time.toFixed(3)}s
+                  </button>
+
                   <span className="ml-3 text-slate-400">Offset (frames):</span>
                   <input
                     type="number"
@@ -114,11 +124,19 @@ const RunTiming: React.FC<RunTimingProps> = ({
                         setStartFramesStr
                       )
                     }
-                    className="w-20 bg-slate-900 border border-slate-600 rounded px-1 ml-1"
+                    className="w-20 bg-slate-900 border border-slate-600 rounded px-1 ml-1 text-white"
                   />
-                  <span className="ml-2 text-slate-400">
+
+                  {/* Offset Adjusted Jump */}
+                  <button
+                    onClick={() =>
+                      onJumpToTime(runStart.time! + runStart.offset)
+                    }
+                    className="ml-2 text-slate-400 hover:text-blue-400 hover:underline transition font-mono"
+                    title="Jump to adjusted start (Time + Offset)"
+                  >
                     ({framesToSecondsDisplay(parseInt(startFramesStr) || 0)})
-                  </span>
+                  </button>
                 </>
               ) : (
                 "Not set"
@@ -130,7 +148,15 @@ const RunTiming: React.FC<RunTimingProps> = ({
               <strong>End:</strong>{" "}
               {runEnd.time !== null ? (
                 <>
-                  <span className="ml-1">{runEnd.time.toFixed(3)}s</span>
+                  {/* Raw Time Jump */}
+                  <button
+                    onClick={() => onJumpToTime(runEnd.time!)}
+                    className="ml-1 text-blue-400 hover:underline hover:text-blue-300 transition"
+                    title="Jump to raw end"
+                  >
+                    {runEnd.time.toFixed(3)}s
+                  </button>
+
                   <span className="ml-3 text-slate-400">Offset (frames):</span>
                   <input
                     type="number"
@@ -144,11 +170,17 @@ const RunTiming: React.FC<RunTimingProps> = ({
                         setEndFramesStr
                       )
                     }
-                    className="w-20 bg-slate-900 border border-slate-600 rounded px-1 ml-1"
+                    className="w-20 bg-slate-900 border border-slate-600 rounded px-1 ml-1 text-white"
                   />
-                  <span className="ml-2 text-slate-400">
+
+                  {/* Offset Adjusted Jump */}
+                  <button
+                    onClick={() => onJumpToTime(runEnd.time! + runEnd.offset)}
+                    className="ml-2 text-slate-400 hover:text-blue-400 hover:underline transition font-mono"
+                    title="Jump to adjusted end (Time + Offset)"
+                  >
                     ({framesToSecondsDisplay(parseInt(endFramesStr) || 0)})
-                  </span>
+                  </button>
                 </>
               ) : (
                 "Not set"
