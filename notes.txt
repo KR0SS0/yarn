@@ -1,5 +1,2 @@
-Force user to mark a run first?
-Allow K L to move +/-10 seconds
-Add player controls -10s -5s -1s -5f -1f Start/Pause +1f +5f +1s +5s +10s
 Allow reordering loads
 

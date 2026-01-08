@@ -4,6 +4,7 @@ import { TimingItem } from "../types";
 import { getItemValidationStatus } from "../utils/Validation";
 import { framesToHMSMs, secondsToFrames } from "../utils/Timing";
 import Badge from "./ui/WarningBadge";
+import Tooltip from "./ui/Tooltip";
 
 interface TimingListProps {
   items: TimingItem[];
@@ -42,20 +43,22 @@ const TimingList: React.FC<TimingListProps> = ({
         <h2 className="text-xl font-bold text-white">Timing Markers</h2>
         {mode === "runner" && (
           <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 bg-slate-900/50 px-2 py-1 rounded-md border border-slate-700">
-              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-tighter">
-                Auto
-              </span>
-              <button
-                onClick={onAutoSelectLoad}
-                onMouseDown={(e) => e.preventDefault()}
-                className={`relative inline-flex h-4 w-7 items-center rounded-full transition-colors ${isAutoLoadSelecting ? "bg-green-500" : "bg-slate-600"}`}
-              >
-                <span
-                  className={`inline-block h-2 w-2 transform rounded-full bg-white transition-transform ${isAutoLoadSelecting ? "translate-x-4" : "translate-x-1"}`}
-                />
-              </button>
-            </div>
+            <Tooltip text="Auto-add new Load markers when current is finished">
+              <div className="flex items-center gap-2 bg-slate-900/50 px-2 py-1 rounded-md border border-slate-700">
+                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-tighter">
+                  Auto
+                </span>
+                <button
+                  onClick={onAutoSelectLoad}
+                  onMouseDown={(e) => e.preventDefault()}
+                  className={`relative inline-flex h-4 w-7 items-center rounded-full transition-colors ${isAutoLoadSelecting ? "bg-green-500" : "bg-slate-600"}`}
+                >
+                  <span
+                    className={`inline-block h-2 w-2 transform rounded-full bg-white transition-transform ${isAutoLoadSelecting ? "translate-x-4" : "translate-x-1"}`}
+                  />
+                </button>
+              </div>
+            </Tooltip>
             <button
               onClick={onAddLoad}
               onMouseDown={(e) => e.preventDefault()}

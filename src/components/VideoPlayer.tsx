@@ -4,6 +4,7 @@ import { getItemValidationStatus } from "../utils/Validation";
 import Badge from "./ui/WarningBadge";
 import { framesToHMSMs, secondsToFrames } from "../utils/Timing";
 import { Play, Pause } from "lucide-react";
+import Tooltip from "./ui/Tooltip";
 
 interface VideoPlayerProps {
   playerRef: React.RefObject<HTMLDivElement | null>;
@@ -127,12 +128,14 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
           <div className="flex flex-col gap-2 bg-slate-900/30 p-2 rounded-lg border border-slate-700/50">
             <div className="flex gap-1 items-center justify-between">
               <ControlButton
-                label="-30s"
-                onClick={() => onControlAction("seek", -30)}
+                label="-10s"
+                onClick={() => onControlAction("seek", -10)}
+                shortcut="J"
               />
               <ControlButton
                 label="-5s"
                 onClick={() => onControlAction("seek", -5)}
+                shortcut="←"
               />
               <ControlButton
                 label="-1s"
@@ -145,30 +148,34 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
               <ControlButton
                 label="-1f"
                 onClick={() => onControlAction("frame", -1)}
+                shortcut=","
               />
 
-              <button
-                type="button"
-                onClick={() => onControlAction("togglePause", 0)}
-                onMouseDown={(e) => e.preventDefault()}
-                className="flex-[1.5] py-2 bg-slate-700 hover:bg-slate-600 text-white rounded transition-all active:scale-95 border border-slate-600 flex justify-center items-center"
-              >
-                <div className="flex items-center justify-center w-5 h-5">
-                  {isPlaying ? (
-                    <Pause
-                      size={18}
-                      fill="currentColor"
-                      className="translate-x-0.5"
-                    />
-                  ) : (
-                    <Play size={18} fill="currentColor" />
-                  )}
-                </div>
-              </button>
+              <Tooltip text="Space">
+                <button
+                  type="button"
+                  onClick={() => onControlAction("togglePause", 0)}
+                  onMouseDown={(e) => e.preventDefault()}
+                  className="flex-[1.5] py-2 bg-slate-700 hover:bg-slate-600 text-white rounded transition-all active:scale-95 border border-slate-600 flex justify-center items-center"
+                >
+                  <div className="flex items-center justify-center w-5 h-5">
+                    {isPlaying ? (
+                      <Pause
+                        size={18}
+                        fill="currentColor"
+                        className="translate-x-0.5"
+                      />
+                    ) : (
+                      <Play size={18} fill="currentColor" />
+                    )}
+                  </div>
+                </button>
+              </Tooltip>
 
               <ControlButton
                 label="+1f"
                 onClick={() => onControlAction("frame", 1)}
+                shortcut="."
               />
               <ControlButton
                 label="+5f"
@@ -181,10 +188,12 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
               <ControlButton
                 label="+5s"
                 onClick={() => onControlAction("seek", 5)}
+                shortcut="→"
               />
               <ControlButton
-                label="+30s"
-                onClick={() => onControlAction("seek", 30)}
+                label="+10s"
+                onClick={() => onControlAction("seek", 10)}
+                shortcut="L"
               />
             </div>
           </div>
@@ -215,15 +224,20 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
 const ControlButton: React.FC<{
   label: string;
   onClick: () => void;
+  shortcut?: string;
   className?: string;
-}> = ({ label, onClick, className = "" }) => (
-  <button
-    onClick={onClick}
-    onMouseDown={(e) => e.preventDefault()}
-    className={`flex-1 py-2 bg-slate-800 hover:bg-slate-700 text-white text-[10px] font-bold rounded border border-slate-700 transition-all active:scale-90 ${className}`}
-  >
-    {label}
-  </button>
-);
+}> = ({ label, onClick, shortcut, className = "" }) => {
+  const button = (
+    <button
+      onClick={onClick}
+      onMouseDown={(e) => e.preventDefault()}
+      className={`flex-1 py-2 bg-slate-800 hover:bg-slate-700 text-white text-[10px] font-bold rounded border border-slate-700 transition-all active:scale-90 ${className}`}
+    >
+      {label}
+    </button>
+  );
+
+  return shortcut ? <Tooltip text={shortcut}>{button}</Tooltip> : button;
+};
 
 export default VideoPlayer;

@@ -1,5 +1,6 @@
 import React, { useRef } from "react";
 import { Download, Upload } from "lucide-react";
+import Tooltip from "./ui/Tooltip";
 
 interface HeaderProps {
   mode: "runner" | "verifier";
@@ -84,40 +85,41 @@ const Header: React.FC<HeaderProps> = ({
             accept=".json"
             className="hidden"
           />
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            onMouseDown={(e) => e.preventDefault()}
-            className="flex items-center gap-2 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-semibold transition shadow-lg border border-slate-500"
-          >
-            <Upload size={18} />
-            <span>Import</span>
-          </button>
-          <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 hidden group-hover:block bg-black text-white text-xs rounded px-2 py-1 z-50 w-max border border-slate-700 shadow-xl pointer-events-none text-center">
-            Load session from JSON
-          </div>
+          <Tooltip text="Load session from JSON">
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              onMouseDown={(e) => e.preventDefault()}
+              className="flex items-center gap-2 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-semibold transition shadow-lg border border-slate-500"
+            >
+              <Upload size={18} />
+              <span>Import</span>
+            </button>
+          </Tooltip>
         </div>
 
         {/* EXPORT BUTTON */}
         <div className="relative group">
-          <button
-            onClick={onDownload}
-            onMouseDown={(e) => e.preventDefault()}
-            disabled={!canExport}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg font-semibold transition shadow-lg active:transform active:scale-95 ${
+          <Tooltip
+            text={
               canExport
-                ? "bg-emerald-600 hover:bg-emerald-700 text-white"
-                : "bg-slate-700 text-slate-500 cursor-not-allowed opacity-50"
-            }`}
+                ? "Export session to JSON"
+                : "Must have a run start and end marked"
+            }
           >
-            <Download size={18} />
-            <span>Export/Save</span>
-          </button>
-
-          <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 hidden group-hover:block bg-black text-white text-xs rounded px-2 py-1 z-50 w-max border border-slate-700 shadow-xl pointer-events-none text-center">
-            {canExport
-              ? "Export session to JSON"
-              : "Must have a run start and end marked"}
-          </div>
+            <button
+              onClick={onDownload}
+              onMouseDown={(e) => e.preventDefault()}
+              disabled={!canExport}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-semibold transition shadow-lg active:transform active:scale-95 ${
+                canExport
+                  ? "bg-emerald-600 hover:bg-emerald-700 text-white"
+                  : "bg-slate-700 text-slate-500 cursor-not-allowed opacity-50"
+              }`}
+            >
+              <Download size={18} />
+              <span>Export/Save</span>
+            </button>
+          </Tooltip>
         </div>
       </div>
     </div>
