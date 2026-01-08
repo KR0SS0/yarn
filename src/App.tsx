@@ -123,7 +123,7 @@ const App = () => {
     if (outsideRun.size > 0) {
       validationWarnings.push({
         type: "outside-run",
-        message: "Some loads occur before the Run Start or after the Run End.",
+        message: "One or more loads occur before the Run Start or after the Run End.",
         affectedLoads: Array.from(outsideRun),
       });
     }

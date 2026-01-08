@@ -1,6 +1,7 @@
 import React from "react";
-import { TimingItem, VALIDATION_CONFIG, ValidationType } from "../types";
+import { TimingItem} from "../types";
 import { getItemValidationStatus } from "../utils/Validation";
+import Badge from "./ui/WarningBadge";
 
 interface VideoPlayerProps {
   playerRef: React.RefObject<HTMLDivElement | null>;
@@ -76,20 +77,6 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
         </div>
       )}
     </div>
-  );
-};
-
-/**
- * Badge styling adjusted to match your VideoPlayer preference
- */
-const Badge: React.FC<{ type: ValidationType }> = ({ type }) => {
-  const style = VALIDATION_CONFIG[type];
-  return (
-    <span
-      className={`px-2 py-0.5 rounded text-xs border border-opacity-50 whitespace-nowrap ${style.bg} ${style.border} ${style.text}`}
-    >
-      {style.label}
-    </span>
   );
 };
 

@@ -1,8 +1,9 @@
 import React from "react";
 import { Trash2, Flag } from "lucide-react";
-import { TimingItem, ValidationType, VALIDATION_CONFIG } from "../types";
+import { TimingItem } from "../types";
 import { getItemValidationStatus } from "../utils/Validation";
 import { framesToHMSMs, secondsToFrames } from "../utils/Timing";
+import Badge from "./ui/WarningBadge";
 
 interface TimingListProps {
   items: TimingItem[];
@@ -141,7 +142,9 @@ const TimingList: React.FC<TimingListProps> = ({
                   <span className="text-slate-500 uppercase font-bold text-[9px]">
                     Duration
                   </span>
-                  <span className="text-yellow-500/90 font-mono mt-0.5">
+                  <span
+                    className={`font-mono mt-0.5 ${item.startTime !== null && item.endTime !== null ? "text-yellow-500/90" : "text-slate-600"}`}
+                  >
                     {item.startTime !== null && item.endTime !== null
                       ? framesToHMSMs(
                           secondsToFrames(item.endTime - item.startTime, fps),
@@ -156,17 +159,6 @@ const TimingList: React.FC<TimingListProps> = ({
         })}
       </div>
     </div>
-  );
-};
-
-const Badge: React.FC<{ type: ValidationType }> = ({ type }) => {
-  const style = VALIDATION_CONFIG[type];
-  return (
-    <span
-      className={`px-2 py-0.5 rounded text-xs border border-opacity-50 whitespace-nowrap ${style.bg} ${style.border} ${style.text}`}
-    >
-      {style.label}
-    </span>
   );
 };
 
