@@ -41,6 +41,7 @@ const VideoInput: React.FC<VideoInputProps> = ({
           />
           <button
             onClick={onLoadVideo}
+            onMouseDown={(e) => e.preventDefault()}
             className="px-6 py-2 bg-blue-600 rounded-lg hover:bg-blue-700 transition disabled:bg-slate-600 disabled:cursor-not-allowed"
           >
             Load Video
@@ -57,6 +58,7 @@ const VideoInput: React.FC<VideoInputProps> = ({
             />
             <button
               onClick={() => setShowFpsHelp(!showFpsHelp)}
+              onMouseDown={(e) => e.preventDefault()}
               className="text-xs text-blue-400 underline hover:text-blue-300"
             >
               How do I find this?

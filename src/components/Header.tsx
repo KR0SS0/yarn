@@ -51,6 +51,7 @@ const Header: React.FC<HeaderProps> = ({
         <div className="flex gap-2">
           <button
             onClick={() => setMode("runner")}
+            onMouseDown={(e) => e.preventDefault()}
             className={`px-6 py-2 rounded-lg font-semibold transition ${
               mode === "runner"
                 ? "bg-blue-600 text-white"
@@ -61,6 +62,7 @@ const Header: React.FC<HeaderProps> = ({
           </button>
           <button
             onClick={() => setMode("verifier")}
+            onMouseDown={(e) => e.preventDefault()}
             className={`px-6 py-2 rounded-lg font-semibold transition ${
               mode === "verifier"
                 ? "bg-purple-600 text-white"
@@ -84,6 +86,7 @@ const Header: React.FC<HeaderProps> = ({
           />
           <button
             onClick={() => fileInputRef.current?.click()}
+            onMouseDown={(e) => e.preventDefault()}
             className="flex items-center gap-2 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-semibold transition shadow-lg border border-slate-500"
           >
             <Upload size={18} />
@@ -98,6 +101,7 @@ const Header: React.FC<HeaderProps> = ({
         <div className="relative group">
           <button
             onClick={onDownload}
+            onMouseDown={(e) => e.preventDefault()}
             disabled={!canExport}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg font-semibold transition shadow-lg active:transform active:scale-95 ${
               canExport

@@ -48,6 +48,7 @@ const TimingList: React.FC<TimingListProps> = ({
               </span>
               <button
                 onClick={onAutoSelectLoad}
+                onMouseDown={(e) => e.preventDefault()}
                 className={`relative inline-flex h-4 w-7 items-center rounded-full transition-colors ${isAutoLoadSelecting ? "bg-green-500" : "bg-slate-600"}`}
               >
                 <span
@@ -57,6 +58,7 @@ const TimingList: React.FC<TimingListProps> = ({
             </div>
             <button
               onClick={onAddLoad}
+              onMouseDown={(e) => e.preventDefault()}
               className="px-3 py-1.5 bg-blue-600 rounded-md hover:bg-blue-700 transition text-xs font-semibold text-white shadow-lg shadow-blue-900/20"
             >
               + Add
@@ -112,6 +114,7 @@ const TimingList: React.FC<TimingListProps> = ({
                         e.stopPropagation();
                         onDeleteItem(item.id);
                       }}
+                      onMouseDown={(e) => e.preventDefault()}
                       className="text-slate-500 hover:text-red-400 p-1 transition-colors"
                     >
                       <Trash2 size={14} />
@@ -178,6 +181,7 @@ const TimeAction: React.FC<{
           e.stopPropagation();
           onClick();
         }}
+        onMouseDown={(e) => e.preventDefault()}
         className="text-blue-400 hover:text-blue-300 text-left font-mono underline decoration-blue-400/30 underline-offset-2 mt-0.5 transition-colors"
       >
         {framesToHMSMs(secondsToFrames(time, fps), fps).smart}

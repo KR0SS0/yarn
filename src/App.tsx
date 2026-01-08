@@ -9,6 +9,7 @@ import { Load, RunMarker, ValidationWarning, TimingItem } from "./types";
 import { extractVideoId } from "./utils/Youtube";
 import { secondsToFrames } from "./utils/Timing";
 import { validateLoad } from "./utils/Validation";
+import { time } from "console";
 
 const DEFAULT_TEST_VIDEO_ID = "IfFfdSRMpQs";
 
@@ -26,6 +27,7 @@ const App = () => {
 
   const playerRef = useRef<HTMLDivElement | null>(null);
   const ytPlayerRef = useRef<any>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
 
   const [runStart, setRunStart] = useState<RunMarker>({
     time: null,
@@ -231,6 +233,46 @@ const App = () => {
     setCurrentSelectedIndex(0);
   };
 
+  const handleJumpToTime = (time: number, itemId: string) => {
+    // Video Actions
+    if (ytPlayerRef.current) {
+      ytPlayerRef.current.seekTo(time, true);
+      ytPlayerRef.current.pauseVideo();
+    }
+
+    // Selection Logic
+    const itemIndex = timingItems.findIndex((item) => item.id === itemId);
+    if (itemIndex !== -1) {
+      setCurrentSelectedIndex(itemIndex);
+    }
+  };
+
+  const handleControlAction = (
+    type: "seek" | "frame" | "togglePause",
+    value: number
+  ) => {
+    if (!ytPlayerRef.current) return;
+
+    const currentTime = ytPlayerRef.current.getCurrentTime();
+
+    switch (type) {
+      case "seek":
+        ytPlayerRef.current.seekTo(currentTime + value, true);
+        break;
+      case "frame":
+        // Move by (1 / fps) * number of frames
+        ytPlayerRef.current.pauseVideo();
+        ytPlayerRef.current.seekTo(currentTime + value / fps, true);
+        break;
+      case "togglePause":
+        const state = ytPlayerRef.current.getPlayerState();
+        if (state === 1)
+          ytPlayerRef.current.pauseVideo(); // 1 is playing
+        else ytPlayerRef.current.playVideo();
+        break;
+    }
+  };
+
   const exportToJson = () => {
     const data = {
       videoId,
@@ -275,63 +317,118 @@ const App = () => {
     document.body.appendChild(tag);
   }, []);
 
-  useEffect(() => {
-    const handleKey = (e: KeyboardEvent) => {
-      const active = document.activeElement;
-      if (active?.tagName === "INPUT" || active?.tagName === "TEXTAREA") return;
-      if (!ytPlayerRef.current) return;
+useEffect(() => {
+  const handleKey = (e: KeyboardEvent) => {
+    // Don't trigger shortcuts if typing in an input
+    const active = document.activeElement;
+    if (active?.tagName === "INPUT" || active?.tagName === "TEXTAREA") return;
+    if (
+      !ytPlayerRef.current ||
+      typeof ytPlayerRef.current.getCurrentTime !== "function"
+    )
+      return;
 
-      switch (e.key) {
-        case " ":
+    const player = ytPlayerRef.current;
+    const currentTime = player.getCurrentTime();
+
+      switch (e.key.toLowerCase()) {
+        case " ": // Spacebar
+        case "k":
           e.preventDefault();
-          ytPlayerRef.current.getPlayerState() === 1
-            ? ytPlayerRef.current.pauseVideo()
-            : ytPlayerRef.current.playVideo();
+          player.getPlayerState() === 1
+            ? player.pauseVideo()
+            : player.playVideo();
           break;
-        case "ArrowLeft":
+
+        // Arrow Keys (Standard 5s)
+        case "arrowleft":
           e.preventDefault();
-          ytPlayerRef.current.seekTo(
-            ytPlayerRef.current.getCurrentTime() - 5,
-            true
-          );
+          player.seekTo(currentTime - 5, true);
           break;
-        case "ArrowRight":
+        case "arrowright":
           e.preventDefault();
-          ytPlayerRef.current.seekTo(
-            ytPlayerRef.current.getCurrentTime() + 5,
-            true
-          );
+          player.seekTo(currentTime + 5, true);
           break;
+
+        // J, L (Standard YouTube skips)
+        case "j": // Back 10s
+          e.preventDefault();
+          player.seekTo(currentTime - 10, true);
+          break;
+        case "l": // Forward 10s
+          e.preventDefault();
+          player.seekTo(currentTime + 10, true);
+          break;
+
+        // Frame Stepping
         case ",":
-          ytPlayerRef.current.pauseVideo();
-          ytPlayerRef.current.seekTo(
-            ytPlayerRef.current.getCurrentTime() - 1 / fps,
-            true
-          );
+          player.pauseVideo();
+          player.seekTo(currentTime - 1 / fps, true);
           break;
         case ".":
-          ytPlayerRef.current.pauseVideo();
-          ytPlayerRef.current.seekTo(
-            ytPlayerRef.current.getCurrentTime() + 1 / fps,
-            true
-          );
+          player.pauseVideo();
+          player.seekTo(currentTime + 1 / fps, true);
+          break;
+
+        // Mute / Unmute
+        case "m":
+          if (player.isMuted()) {
+            player.unMute();
+          } else {
+            player.mute();
+          }
+          break;
+
+        // Fullscreen
+        case "f":
+          const iframe = player.getIframe();
+          if (iframe) {
+            if (document.fullscreenElement) {
+              document.exitFullscreen();
+            } else {
+              iframe.requestFullscreen?.() ||
+                iframe.mozRequestFullScreen?.() ||
+                iframe.webkitRequestFullscreen?.() ||
+                iframe.msRequestFullscreen?.();
+            }
+          }
           break;
       }
     };
+
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
   }, [fps]);
-
+  
   useEffect(() => {
     if (!videoId || !(window as any).YT) return;
-    if (ytPlayerRef.current?.loadVideoById) {
+
+    // If player already exists, just change the video
+    if (
+      ytPlayerRef.current &&
+      typeof ytPlayerRef.current.loadVideoById === "function"
+    ) {
       ytPlayerRef.current.loadVideoById(videoId);
       return;
     }
+
+    // Otherwise, create the player and attach the "onStateChange" listener
     ytPlayerRef.current = new (window as any).YT.Player(playerRef.current, {
       width: "100%",
       videoId,
-      playerVars: { controls: 1 },
+      playerVars: {
+        controls: 1,
+        rel: 0,
+        modestbranding: 1,
+      },
+      events: {
+        onStateChange: (event: any) => {
+          // YT.PlayerState.PLAYING is 1
+          // YT.PlayerState.BUFFERING is 3
+          const playing = event.data === 1 || event.data === 3;
+          setIsPlaying(playing);
+        },
+      },
     });
   }, [videoId]);
 
@@ -370,6 +467,10 @@ const App = () => {
               overlappingLoadIndices={overlappingIndices}
               invalidDurationIndices={invalidDurationIndices}
               outsideRunIndices={outsideRunIndices}
+              fps={fps}
+              onJumpToTime={handleJumpToTime}
+              onControlAction={handleControlAction}
+              isPlaying={isPlaying}
             />
 
             <TimingList
@@ -381,25 +482,7 @@ const App = () => {
                   timingItems.findIndex((i) => i.id === id)
                 )
               }
-              onJumpToTime={(time, itemId) => {
-                // Video Actions
-                if (ytPlayerRef.current) {
-                  ytPlayerRef.current.seekTo(time, true);
-                  ytPlayerRef.current.pauseVideo();
-                }
-
-                // Selection Logic
-                if (itemId === "full-run") {
-                  setCurrentSelectedIndex(0);
-                } else {
-                  const loadIdx = loads.findIndex(
-                    (l) => l.id.toString() === itemId
-                  );
-                  if (loadIdx !== -1) {
-                    setCurrentSelectedIndex(loadIdx + 1);
-                  }
-                }
-              }}
+              onJumpToTime={handleJumpToTime}
               onAddLoad={handleAddLoad}
               onDeleteItem={handleDeleteItem}
               overlappingLoadIndices={overlappingIndices}
