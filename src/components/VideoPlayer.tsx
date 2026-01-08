@@ -7,7 +7,7 @@ import { Play, Pause } from "lucide-react";
 import Tooltip from "./ui/Tooltip";
 
 interface VideoPlayerProps {
-  playerRef: React.RefObject<HTMLDivElement | null>;
+  playerRef: (node: HTMLDivElement | null) => void;
   mode: "runner" | "verifier";
   currentItem: TimingItem | undefined;
   onMarkTime: (type: "start" | "end") => void;

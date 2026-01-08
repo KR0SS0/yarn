@@ -50,7 +50,8 @@ const App = () => {
   const [urlError, setUrlError] = useState("");
   const [showFpsHelp, setShowFpsHelp] = useState(false);
   const [isAutoLoadSelecting, setIsAutoLoadSelecting] = useState(true);
-  const playerRef = useRef<HTMLDivElement | null>(null);
+
+  // ytPlayerRef stores the actual YouTube API instance
   const ytPlayerRef = useRef<any>(null);
   const [isPlaying, setIsPlaying] = useState(false);
 
@@ -185,21 +186,29 @@ const App = () => {
   // --- Handlers ---
   const handleLoadVideo = useCallback(() => {
     const trimmedUrl = videoUrl?.trim();
+
+    // Clear error immediately
+    setUrlError("");
+
     if (!trimmedUrl) {
       setVideoId(DEFAULT_TEST_VIDEO_ID);
-      setUrlError("");
       return;
     }
 
     const id = extractVideoId(trimmedUrl);
     if (id) {
+      // If it's the same ID already loaded, just seek to start
+      if (id === videoId && ytPlayerRef.current) {
+        ytPlayerRef.current.seekTo(0);
+        return;
+      }
+
       setVideoId(id);
-      setUrlError("");
     } else {
       setVideoId(null);
       setUrlError("Invalid YouTube URL");
     }
-  }, [videoUrl, setVideoId, setUrlError]);
+  }, [videoUrl, videoId, setVideoId, setUrlError]);
 
   const handleMarkTime = (type: "start" | "end") => {
     const player = ytPlayerRef.current;
@@ -366,20 +375,10 @@ const App = () => {
     tag.src = "https://www.youtube.com/iframe_api";
     document.body.appendChild(tag);
 
-    // Define the global callback so we can trigger a re-render when the API is ready
     (window as any).onYouTubeIframeAPIReady = () => {
-      // This empty function just forces the component to know YT is now available
-      // because we have videoId in the dependency array of the player effect.
       console.log("YouTube API Ready");
     };
   }, []);
-
-  // Automatically trigger the video load if we restored a URL from storage
-  useEffect(() => {
-    if (videoUrl && !videoId) {
-      handleLoadVideo();
-    }
-  }, [videoUrl, videoId, handleLoadVideo]);
 
   // Inputs / Shortcuts
   useEffect(() => {
@@ -465,56 +464,61 @@ const App = () => {
     return () => window.removeEventListener("keydown", handleKey);
   }, [fps]);
 
-  // YouTube Player
-  useEffect(() => {
-    if (!videoId) return;
-
-    const initializePlayer = () => {
-      // Check if YT API is loaded
-      if (!(window as any).YT || !(window as any).YT.Player) {
-        setTimeout(initializePlayer, 100);
-        return;
-      }
-
-      // If a player already exists and is working, just swap the video
-      if (
-        ytPlayerRef.current &&
-        typeof ytPlayerRef.current.loadVideoById === "function"
-      ) {
-        try {
-          ytPlayerRef.current.loadVideoById(videoId);
+  // YouTube Player Initialization Logic
+  // Using useCallback so it can be used inside the Callback Ref
+  const initializeYouTubePlayer = useCallback(
+    (element: HTMLDivElement) => {
+      const checkAPIAndBuild = () => {
+        if (!(window as any).YT || !(window as any).YT.Player) {
+          setTimeout(checkAPIAndBuild, 100);
           return;
-        } catch (e) {
-          console.warn("Existing player failed to load new ID, recreating...");
         }
+
+        // Cleanup existing player to prevent memory leaks or double-renders
+        if (
+          ytPlayerRef.current &&
+          typeof ytPlayerRef.current.destroy === "function"
+        ) {
+          ytPlayerRef.current.destroy();
+        }
+
+        new (window as any).YT.Player(element, {
+          width: "100%",
+          height: "100%",
+          videoId,
+          playerVars: {
+            controls: 1,
+            rel: 0,
+            modestbranding: 1,
+          },
+          events: {
+            onReady: (event: any) => {
+              ytPlayerRef.current = event.target;
+            },
+            onStateChange: (event: any) => {
+              const playing =
+                event.data === (window as any).YT.PlayerState.PLAYING ||
+                event.data === (window as any).YT.PlayerState.BUFFERING;
+              setIsPlaying(playing);
+            },
+          },
+        });
+      };
+
+      checkAPIAndBuild();
+    },
+    [videoId]
+  );
+
+  // Callback Ref: This fires the moment the VideoPlayer's container div enters the DOM
+  const playerRefCallback = useCallback(
+    (node: HTMLDivElement | null) => {
+      if (node !== null && videoId) {
+        initializeYouTubePlayer(node);
       }
-
-      // Create a fresh player instance
-      new (window as any).YT.Player(playerRef.current, {
-        width: "100%",
-        height: "100%",
-        videoId,
-        playerVars: {
-          controls: 1,
-          rel: 0,
-          modestbranding: 1,
-        },
-        events: {
-          onReady: (event: any) => {
-            ytPlayerRef.current = event.target;
-          },
-          onStateChange: (event: any) => {
-            const playing =
-              event.data === (window as any).YT.PlayerState.PLAYING ||
-              event.data === (window as any).YT.PlayerState.BUFFERING;
-            setIsPlaying(playing);
-          },
-        },
-      });
-    };
-
-    initializePlayer();
-  }, [videoId]);
+    },
+    [videoId, initializeYouTubePlayer]
+  );
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 text-white p-6">
@@ -545,7 +549,7 @@ const App = () => {
         {videoId && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <VideoPlayer
-              playerRef={playerRef}
+              playerRef={playerRefCallback}
               mode={mode}
               currentItem={timingItems[currentSelectedIndex]}
               onMarkTime={handleMarkTime}
