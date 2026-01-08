@@ -51,6 +51,8 @@ const App = () => {
     return runEnd.time + runEnd.offset;
   }, [runEnd]);
 
+  const canExport = runStart.time !== null && runEnd.time !== null;
+
   // ** Comprehensive validation **
   const {
     overlappingIndices,
@@ -384,6 +386,33 @@ const App = () => {
     URL.revokeObjectURL(href);
   };
 
+  // Import handler
+  const handleImport = (data: any) => {
+    if (!data) return;
+
+    // Update Video ID
+    if (data.videoId) {
+      const fullUrl = `https://www.youtube.com/watch?v=${data.videoId}`;
+      setVideoUrl(fullUrl);
+      setTimeout(() => {
+        handleLoadVideo();
+      }, 100);
+    }
+
+    // Update Metadata
+    if (data.fps) setFps(data.fps);
+
+    // Update Timing Markers
+    if (data.runStart) setRunStart(data.runStart);
+    if (data.runEnd) setRunEnd(data.runEnd);
+
+    // Update Load List
+    if (data.loads) {
+      setLoads(data.loads);
+      setCurrentLoadIndex(0); // Reset focus to the first load
+    }
+  };
+
   useEffect(() => {
     const tag = document.createElement("script");
     tag.src = "https://www.youtube.com/iframe_api";
@@ -478,7 +507,13 @@ const App = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 text-white p-6">
       <div className="max-w-7xl mx-auto">
-        <Header mode={mode} setMode={setMode} onDownload={exportToJson} />
+        <Header
+          mode={mode}
+          setMode={setMode}
+          onDownload={exportToJson}
+          onImport={handleImport}
+          canExport={canExport}
+        />
 
         <VideoInput
           videoUrl={videoUrl}
@@ -539,6 +574,6 @@ const App = () => {
       </div>
     </div>
   );
-};
+};;
 
 export default App;

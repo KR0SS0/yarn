@@ -1,4 +1,4 @@
-/**
+/*
  * Convert seconds to frames using a fixed FPS.
  * Rounds to the nearest frame.
  */
@@ -6,9 +6,8 @@ export const secondsToFrames = (seconds: number, fps: number): number => {
   return Math.round(seconds * fps);
 };
 
-/**
- * Convert frames to a formatted HH:MM:SS.mmm string.
- */
+// Convert frames to a formatted HH:MM:SS.mmm string.
+
 export const framesToHMSMs = (frames: number, fps: number) => {
   const totalMs = Math.round((frames / fps) * 1000);
 
