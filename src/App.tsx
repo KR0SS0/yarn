@@ -65,6 +65,8 @@ const App = () => {
       checkAfterEnd: true,
     });
 
+  const [activeOffsetLabel, setActiveOffsetLabel] = useState<string>("");
+
   // ytPlayerRef stores the actual YouTube API instance
   const ytPlayerRef = useRef<any>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -198,12 +200,18 @@ const App = () => {
   const lrtFrames = rtaFrames !== null ? rtaFrames - totalLoadFrames : null;
 
   // Logic to jump to specific verification points
-  const jumpToVerify = (time: number | null, frameOffset: number) => {
-    if (time === null || !ytPlayerRef.current) return;
-    const targetTime = time + frameOffset / fps;
-    ytPlayerRef.current.seekTo(targetTime, true);
-    ytPlayerRef.current.pauseVideo();
-  };
+  const jumpToVerify = useCallback(
+    (time: number | null, frameOffset: number, label?: string) => {
+      if (time === null || !ytPlayerRef.current) return;
+      const targetTime = time + frameOffset / fps;
+      ytPlayerRef.current.seekTo(targetTime, true);
+      ytPlayerRef.current.pauseVideo();
+
+      // Set the label so the UI knows what we are looking at
+      if (label) setActiveOffsetLabel(label);
+    },
+    [fps]
+  );
 
   // --- Handlers ---
   const handleLoadVideo = useCallback(() => {
@@ -319,77 +327,109 @@ const App = () => {
     }
   };
 
-  const handleCycleVerifier = (direction: "next" | "prev") => {
-    const current = timingItems[currentSelectedIndex];
-    if (!current) return;
+  const handleCycleVerifier = useCallback(
+    (direction: "next" | "prev") => {
+      const current = timingItems[currentSelectedIndex];
+      if (!current) return;
 
-    const getActivePoints = (item: TimingItem) =>
-      [
-        {
-          time: item.startTime,
-          offset: -1,
-          active: verifierSettings.checkBeforeStart,
-        },
-        { time: item.startTime, offset: 0, active: true },
-        {
-          time: item.startTime,
-          offset: 1,
-          active: verifierSettings.checkAfterStart,
-        },
-        {
-          time: item.endTime,
-          offset: -1,
-          active: verifierSettings.checkBeforeEnd,
-        },
-        { time: item.endTime, offset: 0, active: true },
-        { time: item.endTime, offset: 1, active: verifierSettings.checkAfterEnd },
-      ].filter((p) => p.time !== null && p.active);
+      // Helper to generate a label for the checkpoint
+      const getPointLabel = (offset: number, isStart: boolean) => {
+        const type = isStart ? "Start" : "End";
+        if (offset === -1) return `1f Before ${type}`;
+        if (offset === 1) return `1f After ${type}`;
+        return `Exact ${type}`;
+      };
 
-    const activePoints = getActivePoints(current);
-    if (activePoints.length === 0) return;
+      const getActivePoints = (item: TimingItem) =>
+        [
+          {
+            time: item.startTime,
+            offset: -1,
+            active: verifierSettings.checkBeforeStart,
+            isStart: true,
+          },
+          { time: item.startTime, offset: 0, active: true, isStart: true },
+          {
+            time: item.startTime,
+            offset: 1,
+            active: verifierSettings.checkAfterStart,
+            isStart: true,
+          },
+          {
+            time: item.endTime,
+            offset: -1,
+            active: verifierSettings.checkBeforeEnd,
+            isStart: false,
+          },
+          { time: item.endTime, offset: 0, active: true, isStart: false },
+          {
+            time: item.endTime,
+            offset: 1,
+            active: verifierSettings.checkAfterEnd,
+            isStart: false,
+          },
+        ].filter((p) => p.time !== null && p.active);
 
-    const currentTime = ytPlayerRef.current?.getCurrentTime() || 0;
+      const activePoints = getActivePoints(current);
+      if (activePoints.length === 0) return;
 
-    if (direction === "next") {
-      // Try to find the next point in the current item
-      const targetPoint = activePoints.find(
-        (p) => p.time! + p.offset / fps > currentTime + 0.001
-      );
+      const currentTime = ytPlayerRef.current?.getCurrentTime() || 0;
 
-      if (targetPoint) {
-        jumpToVerify(targetPoint.time, targetPoint.offset);
+      if (direction === "next") {
+        const targetPoint = activePoints.find(
+          (p) => p.time! + p.offset / fps > currentTime + 0.001
+        );
+
+        if (targetPoint) {
+          jumpToVerify(
+            targetPoint.time,
+            targetPoint.offset,
+            getPointLabel(targetPoint.offset, targetPoint.isStart)
+          );
+        } else {
+          const nextIndex = currentSelectedIndex + 1;
+          if (nextIndex < timingItems.length) {
+            setCurrentSelectedIndex(nextIndex);
+            const nextItemPoints = getActivePoints(timingItems[nextIndex]);
+            if (nextItemPoints.length > 0) {
+              const p = nextItemPoints[0];
+              jumpToVerify(p.time, p.offset, getPointLabel(p.offset, p.isStart));
+            }
+          }
+        }
       } else {
-        // If no points left, go to the NEXT LOAD
-        const nextIndex = currentSelectedIndex + 1;
-        if (nextIndex < timingItems.length) {
-          setCurrentSelectedIndex(nextIndex);
-          const nextItemPoints = getActivePoints(timingItems[nextIndex]);
-          if (nextItemPoints.length > 0) {
-            jumpToVerify(nextItemPoints[0].time, nextItemPoints[0].offset);
+        const targetPoint = [...activePoints]
+          .reverse()
+          .find((p) => p.time! + p.offset / fps < currentTime - 0.001);
+
+        if (targetPoint) {
+          jumpToVerify(
+            targetPoint.time,
+            targetPoint.offset,
+            getPointLabel(targetPoint.offset, targetPoint.isStart)
+          );
+        } else {
+          const prevIndex = currentSelectedIndex - 1;
+          if (prevIndex >= 0) {
+            setCurrentSelectedIndex(prevIndex);
+            const prevItemPoints = getActivePoints(timingItems[prevIndex]);
+            if (prevItemPoints.length > 0) {
+              const p = prevItemPoints[prevItemPoints.length - 1];
+              jumpToVerify(p.time, p.offset, getPointLabel(p.offset, p.isStart));
+            }
           }
         }
       }
-    } else {
-      // Reverse of above
-      const targetPoint = [...activePoints]
-        .reverse()
-        .find((p) => p.time! + p.offset / fps < currentTime - 0.001);
-
-      if (targetPoint) {
-        jumpToVerify(targetPoint.time, targetPoint.offset);
-      } else {
-        const prevIndex = currentSelectedIndex - 1;
-        if (prevIndex >= 0) {
-          setCurrentSelectedIndex(prevIndex);
-          const prevItemPoints = getActivePoints(timingItems[prevIndex]);
-          if (prevItemPoints.length > 0) {
-            const lastPoint = prevItemPoints[prevItemPoints.length - 1];
-            jumpToVerify(lastPoint.time, lastPoint.offset);
-          }
-        }
-      }
-    }
-  };
+    },
+    [
+      timingItems,
+      currentSelectedIndex,
+      verifierSettings,
+      fps,
+      setCurrentSelectedIndex,
+      jumpToVerify,
+    ]
+  );
 
   const handleControlAction = (
     type: "seek" | "frame" | "togglePause",
@@ -427,13 +467,29 @@ const App = () => {
     if (mode === "verifier") {
       // Define points for this specific item
       const activePoints = [
-        { time: item.startTime, offset: -1, active: verifierSettings.checkBeforeStart },
-        { time: item.startTime, offset: 0,  active: true },
-        { time: item.startTime, offset: 1,  active: verifierSettings.checkAfterStart },
-        { time: item.endTime,   offset: -1, active: verifierSettings.checkBeforeEnd },
-        { time: item.endTime,   offset: 0,  active: true },
-        { time: item.endTime,   offset: 1,  active: verifierSettings.checkAfterEnd },
-      ].filter(p => p.time !== null && p.active);
+        {
+          time: item.startTime,
+          offset: -1,
+          active: verifierSettings.checkBeforeStart,
+        },
+        { time: item.startTime, offset: 0, active: true },
+        {
+          time: item.startTime,
+          offset: 1,
+          active: verifierSettings.checkAfterStart,
+        },
+        {
+          time: item.endTime,
+          offset: -1,
+          active: verifierSettings.checkBeforeEnd,
+        },
+        { time: item.endTime, offset: 0, active: true },
+        {
+          time: item.endTime,
+          offset: 1,
+          active: verifierSettings.checkAfterEnd,
+        },
+      ].filter((p) => p.time !== null && p.active);
 
       // Jump to the very first available checkpoint
       if (activePoints.length > 0) {
@@ -592,12 +648,20 @@ const App = () => {
             }
           }
           break;
+        case "z":
+          e.preventDefault();
+          handleCycleVerifier("prev");
+          break;
+        case "x":
+          e.preventDefault();
+          handleCycleVerifier("next");
+          break;
       }
     };
 
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
-  }, [fps]);
+  }, [fps, handleCycleVerifier]);
 
   // YouTube Player Initialization Logic
   // Using useCallback so it can be used inside the Callback Ref
@@ -699,6 +763,7 @@ const App = () => {
               setVerifierSettings={setVerifierSettings}
               jumpToVerify={jumpToVerify}
               onCycle={handleCycleVerifier}
+              activeOffsetLabel={activeOffsetLabel}
             />
 
             <TimingList

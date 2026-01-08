@@ -5,6 +5,8 @@ import Badge from "./ui/WarningBadge";
 import { framesToHMSMs, secondsToFrames } from "../utils/timing";
 import { Play, Pause, ChevronLeft, ChevronRight } from "lucide-react";
 import Tooltip from "./ui/Tooltip";
+import PillToggle from "./ui/PillToggle";
+import VerifierJumpButton from "./ui/VerifierJumpButton";
 
 interface VideoPlayerProps {
   playerRef: (node: HTMLDivElement | null) => void;
@@ -26,6 +28,7 @@ interface VideoPlayerProps {
   setVerifierSettings: (settings: VerifierSettings) => void;
   jumpToVerify: (time: number | null, offset: number) => void;
   onCycle: (direction: "next" | "prev") => void;
+  activeOffsetLabel?: string;
 }
 
 const VideoPlayer: React.FC<VideoPlayerProps> = ({
@@ -44,6 +47,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   setVerifierSettings,
   jumpToVerify,
   onCycle,
+  activeOffsetLabel,
 }) => {
   if (!currentItem) return null;
 
@@ -82,6 +86,11 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
                   ? currentItem.label
                   : `Load #${currentItem.loadIndex! + 1}`}
               </span>
+              {isVerifier && activeOffsetLabel && (
+                <span className="text-blue-400 ml-2 text-xs font-medium italic">
+                  ({activeOffsetLabel.toLowerCase()})
+                </span>
+              )}
             </span>
 
             <div className="flex items-center gap-3 border-l border-slate-700 pl-4 text-slate-300">
@@ -94,6 +103,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
                   onClick={() =>
                     onJumpToTime(currentItem.startTime!, currentItem.id)
                   }
+                  onMouseDown={(e) => e.preventDefault()}
                   className={`font-mono transition-colors ${
                     currentItem.startTime !== null
                       ? "text-white hover:text-blue-400 underline decoration-white/20"
@@ -109,6 +119,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
                 </span>
                 <button
                   disabled={currentItem.endTime === null}
+                  onMouseDown={(e) => e.preventDefault()}
                   onClick={() =>
                     onJumpToTime(currentItem.endTime!, currentItem.id)
                   }
@@ -132,27 +143,29 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
         </div>
 
         {isVerifier ? (
-          /* VERIFIER CONTROLS: Replaces Playback & Mark buttons */
-          <div className="flex flex-col gap-3 bg-blue-900/10 p-4 rounded-lg border border-blue-500/30">
-            <div className="flex items-center justify-between gap-4">
-              {/* Cycle Controls */}
-              <div className="flex items-center bg-slate-900 rounded-lg p-1 border border-slate-700 shadow-sm">
-                <Tooltip text="[">
+          <div className="flex flex-col gap-4 bg-blue-900/10 p-4 rounded-lg border border-blue-500/30">
+            {/* TOP ROW: Navigation & Jump Actions */}
+            <div className="flex items-center gap-6">
+              {/* Cycle Navigation */}
+              <div className="flex items-center bg-slate-900 rounded-lg p-1 border border-slate-700 shadow-sm shrink-0">
+                <Tooltip text="Z">
                   <button
                     onClick={() => onCycle("prev")}
+                    onMouseDown={(e) => e.preventDefault()}
                     className="p-2 hover:bg-slate-800 text-blue-400 rounded transition"
                   >
                     <ChevronLeft size={20} />
                   </button>
                 </Tooltip>
-                <div className="px-4 text-center">
+                <div className="px-3 text-center border-x border-slate-800">
                   <span className="text-[10px] uppercase font-bold text-slate-500 block">
-                    Cycle Point
+                    Cycle
                   </span>
                 </div>
-                <Tooltip text="]">
+                <Tooltip text="X">
                   <button
                     onClick={() => onCycle("next")}
+                    onMouseDown={(e) => e.preventDefault()}
                     className="p-2 hover:bg-slate-800 text-blue-400 rounded transition"
                   >
                     <ChevronRight size={20} />
@@ -160,60 +173,104 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
                 </Tooltip>
               </div>
 
-              {/* Checkpoint Jump Grid */}
-              <div className="grid grid-cols-4 gap-2 flex-1">
-                {[
-                  {
-                    label: "-1f Start",
-                    offset: -1,
-                    time: currentItem.startTime,
-                    key: "checkBeforeStart" as const,
-                  },
-                  {
-                    label: "+1f Start",
-                    offset: 1,
-                    time: currentItem.startTime,
-                    key: "checkAfterStart" as const,
-                  },
-                  {
-                    label: "-1f End",
-                    offset: -1,
-                    time: currentItem.endTime,
-                    key: "checkBeforeEnd" as const,
-                  },
-                  {
-                    label: "+1f End",
-                    offset: 1,
-                    time: currentItem.endTime,
-                    key: "checkAfterEnd" as const,
-                  },
-                ].map((btn) => (
-                  <div key={btn.label} className="flex flex-col gap-1.5">
-                    <button
-                      onClick={() => jumpToVerify(btn.time, btn.offset)}
-                      disabled={btn.time === null}
-                      className="py-2.5 bg-slate-700 hover:bg-slate-600 text-white text-[10px] font-bold rounded border border-slate-600 transition-all disabled:opacity-30"
-                    >
-                      {btn.label}
-                    </button>
-                    <label className="flex items-center justify-center gap-2 cursor-pointer group">
-                      <input
-                        type="checkbox"
-                        checked={verifierSettings[btn.key]}
-                        onChange={(e) =>
-                          setVerifierSettings({
-                            ...verifierSettings,
-                            [btn.key]: e.target.checked,
-                          })
-                        }
-                        className="w-3 h-3 rounded border-slate-600 bg-slate-900 text-blue-500 focus:ring-blue-500 cursor-pointer"
-                      />
-                      <span className="text-[9px] text-slate-400 uppercase font-medium group-hover:text-slate-200">
-                        Auto
-                      </span>
-                    </label>
-                  </div>
-                ))}
+              {/* Action Buttons Grid */}
+              <div className="flex gap-4 flex-1">
+                {/* START JUMPS */}
+                <div className="flex-1 grid grid-cols-3 gap-1 bg-slate-900/40 p-1 rounded-md border border-slate-700/30">
+                  <VerifierJumpButton
+                    label="Start -1f"
+                    offset={-1}
+                    time={currentItem.startTime}
+                    onClick={jumpToVerify}
+                  />
+                  <VerifierJumpButton
+                    label="Exact Start"
+                    offset={0}
+                    time={currentItem.startTime}
+                    onClick={jumpToVerify}
+                    primary
+                  />
+                  <VerifierJumpButton
+                    label="Start +1f"
+                    offset={1}
+                    time={currentItem.startTime}
+                    onClick={jumpToVerify}
+                  />
+                </div>
+
+                {/* END JUMPS */}
+                <div className="flex-1 grid grid-cols-3 gap-1 bg-slate-900/40 p-1 rounded-md border border-slate-700/30">
+                  <VerifierJumpButton
+                    label="End -1f"
+                    offset={-1}
+                    time={currentItem.endTime}
+                    onClick={jumpToVerify}
+                  />
+                  <VerifierJumpButton
+                    label="Exact End"
+                    offset={0}
+                    time={currentItem.endTime}
+                    onClick={jumpToVerify}
+                    primary
+                  />
+                  <VerifierJumpButton
+                    label="End +1f"
+                    offset={1}
+                    time={currentItem.endTime}
+                    onClick={jumpToVerify}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* BOTTOM ROW: Cycle Rules (Pill Toggles) */}
+            <div className="flex items-center justify-between px-4 py-2 bg-slate-900/60 rounded-full border border-slate-700/50">
+              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wide">
+                Always cycle between:
+              </span>
+
+              <div className="flex items-center gap-6">
+                <ToggleGroup
+                  label="1f before start"
+                  checked={verifierSettings.checkBeforeStart}
+                  onChange={(v) =>
+                    setVerifierSettings({
+                      ...verifierSettings,
+                      checkBeforeStart: v,
+                    })
+                  }
+                />
+                <ToggleGroup
+                  label="1f after start"
+                  checked={verifierSettings.checkAfterStart}
+                  onChange={(v) =>
+                    setVerifierSettings({
+                      ...verifierSettings,
+                      checkAfterStart: v,
+                    })
+                  }
+                />
+                <div className="w-px h-4 bg-slate-700 mx-1" /> {/* Divider */}
+                <ToggleGroup
+                  label="1f before end"
+                  checked={verifierSettings.checkBeforeEnd}
+                  onChange={(v) =>
+                    setVerifierSettings({
+                      ...verifierSettings,
+                      checkBeforeEnd: v,
+                    })
+                  }
+                />
+                <ToggleGroup
+                  label="1f after end"
+                  checked={verifierSettings.checkAfterEnd}
+                  onChange={(v) =>
+                    setVerifierSettings({
+                      ...verifierSettings,
+                      checkAfterEnd: v,
+                    })
+                  }
+                />
               </div>
             </div>
           </div>
@@ -249,6 +306,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
                 <Tooltip text="Space" className="flex-[1.5]">
                   <button
                     onClick={() => onControlAction("togglePause", 0)}
+                    onMouseDown={(e) => e.preventDefault()}
                     className="w-full py-2 bg-slate-700 hover:bg-slate-600 text-white rounded transition-all active:scale-95 border border-slate-600 flex justify-center items-center"
                   >
                     {isPlaying ? (
@@ -292,6 +350,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
             <div className="flex gap-2">
               <button
                 onClick={() => onMarkTime("start")}
+                onMouseDown={(e) => e.preventDefault()}
                 className="flex-1 px-4 py-3 bg-green-600 rounded-lg hover:bg-green-700 transition font-bold text-white shadow-lg active:scale-95"
               >
                 {currentItem.startTime !== null
@@ -300,6 +359,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
               </button>
               <button
                 onClick={() => onMarkTime("end")}
+                onMouseDown={(e) => e.preventDefault()}
                 className="flex-1 px-4 py-3 bg-red-600 rounded-lg hover:bg-red-700 transition font-bold text-white shadow-lg active:scale-95"
               >
                 {currentItem.endTime !== null ? "Re-mark End" : "Mark End"}
@@ -321,6 +381,7 @@ const ControlButton: React.FC<{
   const btn = (
     <button
       onClick={onClick}
+      onMouseDown={(e) => e.preventDefault()}
       className="w-full py-2 bg-slate-800 hover:bg-slate-700 text-white text-[10px] font-bold rounded border border-slate-700 transition-all active:scale-90"
     >
       {label}
@@ -332,5 +393,20 @@ const ControlButton: React.FC<{
     <div className="flex-1">{btn}</div>
   );
 };
+
+const ToggleGroup: React.FC<{
+  label: string;
+  checked: boolean;
+  onChange: (val: boolean) => void;
+}> = ({ label, checked, onChange }) => (
+  <div className="flex items-center gap-2">
+    <span
+      className={`text-[10px] font-medium transition-colors ${checked ? "text-blue-300" : "text-slate-500"}`}
+    >
+      {label}
+    </span>
+    <PillToggle checked={checked} onChange={onChange} />
+  </div>
+);
 
 export default VideoPlayer;

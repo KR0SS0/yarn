@@ -125,6 +125,7 @@ const Header: React.FC<HeaderProps> = ({
         </div>
         <button
           onClick={onReset}
+          onMouseDown={(e) => e.preventDefault()}
           className="flex items-center gap-2 px-3 py-2 bg-slate-700 hover:bg-red-900/40 text-slate-300 hover:text-red-400 rounded-lg transition-colors border border-slate-600"
           title="Clear all data"
         >

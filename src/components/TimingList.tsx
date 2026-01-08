@@ -5,6 +5,7 @@ import { getItemValidationStatus } from "../utils/validation";
 import { framesToHMSMs, secondsToFrames } from "../utils/timing";
 import Badge from "./ui/WarningBadge";
 import Tooltip from "./ui/Tooltip";
+import PillToggle from "./ui/PillToggle";
 
 interface TimingListProps {
   items: TimingItem[];
@@ -55,19 +56,10 @@ const TimingList: React.FC<TimingListProps> = ({
                 <span className="text-[10px] font-bold text-slate-500 uppercase tracking-tighter">
                   Auto
                 </span>
-                <button
-                  onClick={onAutoSelectLoad}
-                  onMouseDown={(e) => e.preventDefault()}
-                  className={`relative inline-flex h-4 w-7 items-center rounded-full transition-colors ${
-                    isAutoLoadSelecting ? "bg-green-500" : "bg-slate-600"
-                  }`}
-                >
-                  <span
-                    className={`inline-block h-2 w-2 transform rounded-full bg-white transition-transform ${
-                      isAutoLoadSelecting ? "translate-x-4" : "translate-x-1"
-                    }`}
-                  />
-                </button>
+                <PillToggle
+                  checked={isAutoLoadSelecting}
+                  onChange={onAutoSelectLoad}
+                />
               </div>
             </Tooltip>
             <button
