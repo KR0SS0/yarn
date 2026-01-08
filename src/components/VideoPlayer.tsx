@@ -151,22 +151,22 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
                 shortcut=","
               />
 
-              <Tooltip text="Space">
+              <Tooltip text="Space" className="flex-[1.5]">
                 <button
                   type="button"
                   onClick={() => onControlAction("togglePause", 0)}
                   onMouseDown={(e) => e.preventDefault()}
-                  className="flex-[1.5] py-2 bg-slate-700 hover:bg-slate-600 text-white rounded transition-all active:scale-95 border border-slate-600 flex justify-center items-center"
+                  className="w-full py-2 bg-slate-700 hover:bg-slate-600 text-white rounded transition-all active:scale-95 border border-slate-600 flex justify-center items-center"
                 >
                   <div className="flex items-center justify-center w-5 h-5">
                     {isPlaying ? (
-                      <Pause
+                      <Pause size={18} fill="currentColor" />
+                    ) : (
+                      <Play
                         size={18}
                         fill="currentColor"
                         className="translate-x-0.5"
                       />
-                    ) : (
-                      <Play size={18} fill="currentColor" />
                     )}
                   </div>
                 </button>
@@ -225,19 +225,24 @@ const ControlButton: React.FC<{
   label: string;
   onClick: () => void;
   shortcut?: string;
-  className?: string;
-}> = ({ label, onClick, shortcut, className = "" }) => {
+}> = ({ label, onClick, shortcut }) => {
   const button = (
     <button
       onClick={onClick}
       onMouseDown={(e) => e.preventDefault()}
-      className={`flex-1 py-2 bg-slate-800 hover:bg-slate-700 text-white text-[10px] font-bold rounded border border-slate-700 transition-all active:scale-90 ${className}`}
+      // w-full is key here to match the Tooltip's width
+      className="w-full py-2 bg-slate-800 hover:bg-slate-700 text-white text-[10px] font-bold rounded border border-slate-700 transition-all active:scale-90"
     >
       {label}
     </button>
   );
 
-  return shortcut ? <Tooltip text={shortcut}>{button}</Tooltip> : button;
+  return shortcut ? (
+    <Tooltip text={shortcut}>{button}</Tooltip>
+  ) : (
+    /* We still use flex-1 here for non-shortcut buttons so they match the size */
+    <div className="flex-1">{button}</div>
+  );
 };
 
 export default VideoPlayer;
