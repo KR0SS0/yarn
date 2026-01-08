@@ -415,6 +415,7 @@ useEffect(() => {
     // Otherwise, create the player and attach the "onStateChange" listener
     ytPlayerRef.current = new (window as any).YT.Player(playerRef.current, {
       width: "100%",
+      height: "100%",
       videoId,
       playerVars: {
         controls: 1,

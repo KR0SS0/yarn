@@ -52,10 +52,12 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
   return (
     <div className="bg-slate-800 rounded-lg shadow-2xl p-6 lg:col-span-2 flex flex-col border border-slate-700">
-      <div
-        ref={playerRef}
-        className="aspect-video bg-black rounded-lg mb-4"
-      ></div>
+      <div className="relative w-full aspect-video bg-black overflow-hidden mb-4 shadow-inner">
+        <div
+          ref={playerRef}
+          className="absolute top-0 left-0 w-full h-full"
+        ></div>
+      </div>
 
       {mode === "runner" && (
         <div className="flex flex-col gap-4">
