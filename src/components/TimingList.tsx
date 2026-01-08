@@ -1,8 +1,8 @@
 import React from "react";
 import { Trash2, Flag } from "lucide-react";
 import { TimingItem } from "../types";
-import { getItemValidationStatus } from "../utils/Validation";
-import { framesToHMSMs, secondsToFrames } from "../utils/Timing";
+import { getItemValidationStatus } from "../utils/validation";
+import { framesToHMSMs, secondsToFrames } from "../utils/timing";
 import Badge from "./ui/WarningBadge";
 import Tooltip from "./ui/Tooltip";
 

@@ -1,5 +1,5 @@
 import React from "react";
-import { framesToHMSMs } from "../utils/Timing";
+import { framesToHMSMs } from "../utils/timing";
 import Tooltip from "./ui/Tooltip";
 import { Clock } from "lucide-react"; // Optional: adding an icon for the header
 
@@ -43,7 +43,7 @@ const TimingSummary: React.FC<TimingSummaryProps> = ({
                 {lrt.formatted}
               </span>
               <span className="text-[10px] font-medium text-slate-500 font-mono mt-1">
-                {lrt.frames.toLocaleString()} frames
+                {lrt.frames.toLocaleString()} frames @ {fps}fps
               </span>
             </div>
           </Tooltip>
@@ -63,7 +63,7 @@ const TimingSummary: React.FC<TimingSummaryProps> = ({
                 {rta.formatted}
               </span>
               <span className="text-[10px] font-medium text-slate-500 font-mono mt-1">
-                {rta.frames.toLocaleString()} frames
+                {rta.frames.toLocaleString()} frames @ {fps}fps
               </span>
             </div>
           </Tooltip>

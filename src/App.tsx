@@ -1,4 +1,10 @@
-import React, { useState, useRef, useEffect, useMemo } from "react";
+import React, {
+  useState,
+  useRef,
+  useEffect,
+  useMemo,
+  useCallback,
+} from "react";
 import Header from "./components/Header";
 import VideoInput from "./components/VideoInput";
 import TimingSummary from "./components/TimingSummary";
@@ -6,34 +12,46 @@ import VideoPlayer from "./components/VideoPlayer";
 import TimingList from "./components/TimingList";
 import ValidationWarnings from "./components/ValidationWarnings";
 import { Load, RunMarker, ValidationWarning, TimingItem } from "./types";
-import { extractVideoId } from "./utils/Youtube";
-import { secondsToFrames } from "./utils/Timing";
-import { validateLoad } from "./utils/Validation";
-import { time } from "console";
+import { extractVideoId } from "./utils/youtube";
+import { secondsToFrames } from "./utils/timing";
+import { validateLoad } from "./utils/validation";
+import { usePersistentState } from "./hooks/usePersistanceState";
 
 const DEFAULT_TEST_VIDEO_ID = "IfFfdSRMpQs";
 
 const App = () => {
-  const [mode, setMode] = useState<"runner" | "verifier">("runner");
-  const [videoUrl, setVideoUrl] = useState("");
-  const [videoId, setVideoId] = useState<string | null>(null);
-  const [urlError, setUrlError] = useState("");
-  const [fps, setFps] = useState<number>(30);
-  const [showFpsHelp, setShowFpsHelp] = useState(false);
-
-  const [isAutoLoadSelecting, setIsAutoLoadSelecting] = useState(true);
-  const [loads, setLoads] = useState<Load[]>([]);
-  const [currentSelectedIndex, setCurrentSelectedIndex] = useState(0);
-
-  const playerRef = useRef<HTMLDivElement | null>(null);
-  const ytPlayerRef = useRef<any>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
-
-  const [runStart, setRunStart] = useState<RunMarker>({
+  // Persistent States
+  const [fps, setFps] = usePersistentState<number>("yt_fps", 30);
+  const [runStart, setRunStart] = usePersistentState<RunMarker>(
+    "yt_run_start",
+    {
+      time: null,
+      offset: 0,
+    }
+  );
+  const [runEnd, setRunEnd] = usePersistentState<RunMarker>("yt_run_end", {
     time: null,
     offset: 0,
   });
-  const [runEnd, setRunEnd] = useState<RunMarker>({ time: null, offset: 0 });
+  const [loads, setLoads] = usePersistentState<Load[]>("yt_loads", []);
+  const [videoUrl, setVideoUrl] = usePersistentState<string>(
+    "yt_video_url",
+    ""
+  );
+  const [videoId, setVideoId] = usePersistentState<string | null>(
+    "yt_video_id",
+    null
+  );
+
+  // Non-Persistent States
+  const [mode, setMode] = useState<"runner" | "verifier">("runner");
+  const [urlError, setUrlError] = useState("");
+  const [showFpsHelp, setShowFpsHelp] = useState(false);
+  const [isAutoLoadSelecting, setIsAutoLoadSelecting] = useState(true);
+  const [currentSelectedIndex, setCurrentSelectedIndex] = useState(0);
+  const playerRef = useRef<HTMLDivElement | null>(null);
+  const ytPlayerRef = useRef<any>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
 
   const timingItems: TimingItem[] = useMemo(() => {
     return [
@@ -125,7 +143,8 @@ const App = () => {
     if (outsideRun.size > 0) {
       validationWarnings.push({
         type: "outside-run",
-        message: "One or more loads occur before the Run Start or after the Run End.",
+        message:
+          "One or more loads occur before the Run Start or after the Run End.",
         affectedLoads: Array.from(outsideRun),
       });
     }
@@ -163,13 +182,15 @@ const App = () => {
   const lrtFrames = rtaFrames !== null ? rtaFrames - totalLoadFrames : null;
 
   // --- Handlers ---
-  const handleLoadVideo = () => {
-    if (!videoUrl.trim()) {
+  const handleLoadVideo = useCallback(() => {
+    const trimmedUrl = videoUrl?.trim();
+    if (!trimmedUrl) {
       setVideoId(DEFAULT_TEST_VIDEO_ID);
       setUrlError("");
       return;
     }
-    const id = extractVideoId(videoUrl);
+
+    const id = extractVideoId(trimmedUrl);
     if (id) {
       setVideoId(id);
       setUrlError("");
@@ -177,10 +198,18 @@ const App = () => {
       setVideoId(null);
       setUrlError("Invalid YouTube URL");
     }
-  };
+  }, [videoUrl, setVideoId, setUrlError]);
 
   const handleMarkTime = (type: "start" | "end") => {
-    if (!ytPlayerRef.current?.getCurrentTime) return;
+    const player = ytPlayerRef.current;
+
+    // Log this to see if the player is actually accessible
+    console.log("Player Instance:", player);
+
+    if (!player || typeof player.getCurrentTime !== "function") {
+      console.warn("YouTube Player is not ready to provide time.");
+      return;
+    }
     const time = ytPlayerRef.current.getCurrentTime();
     const currentItem = timingItems[currentSelectedIndex];
     if (!currentItem) return;
@@ -312,24 +341,44 @@ const App = () => {
 
   // --- Effects ---
   useEffect(() => {
-    const tag = document.createElement("script");
-    tag.src = "https://www.youtube.com/iframe_api";
-    document.body.appendChild(tag);
-  }, []);
-
-useEffect(() => {
-  const handleKey = (e: KeyboardEvent) => {
-    // Don't trigger shortcuts if typing in an input
-    const active = document.activeElement;
-    if (active?.tagName === "INPUT" || active?.tagName === "TEXTAREA") return;
     if (
-      !ytPlayerRef.current ||
-      typeof ytPlayerRef.current.getCurrentTime !== "function"
+      document.querySelector('script[src="https://www.youtube.com/iframe_api"]')
     )
       return;
 
-    const player = ytPlayerRef.current;
-    const currentTime = player.getCurrentTime();
+    const tag = document.createElement("script");
+    tag.src = "https://www.youtube.com/iframe_api";
+    document.body.appendChild(tag);
+
+    // Define the global callback so we can trigger a re-render when the API is ready
+    (window as any).onYouTubeIframeAPIReady = () => {
+      // This empty function just forces the component to know YT is now available
+      // because we have videoId in the dependency array of the player effect.
+      console.log("YouTube API Ready");
+    };
+  }, []);
+
+  // Automatically trigger the video load if we restored a URL from storage
+  useEffect(() => {
+    if (videoUrl && !videoId) {
+      handleLoadVideo();
+    }
+  }, [videoUrl, videoId, handleLoadVideo]);
+
+  // Inputs / Shortcuts
+  useEffect(() => {
+    const handleKey = (e: KeyboardEvent) => {
+      // Don't trigger shortcuts if typing in an input
+      const active = document.activeElement;
+      if (active?.tagName === "INPUT" || active?.tagName === "TEXTAREA") return;
+      if (
+        !ytPlayerRef.current ||
+        typeof ytPlayerRef.current.getCurrentTime !== "function"
+      )
+        return;
+
+      const player = ytPlayerRef.current;
+      const currentTime = player.getCurrentTime();
 
       switch (e.key.toLowerCase()) {
         case " ": // Spacebar
@@ -399,38 +448,56 @@ useEffect(() => {
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
   }, [fps]);
-  
+
+  // YouTube Player
   useEffect(() => {
-    if (!videoId || !(window as any).YT) return;
+    if (!videoId) return;
 
-    // If player already exists, just change the video
-    if (
-      ytPlayerRef.current &&
-      typeof ytPlayerRef.current.loadVideoById === "function"
-    ) {
-      ytPlayerRef.current.loadVideoById(videoId);
-      return;
-    }
+    const initializePlayer = () => {
+      // Check if YT API is loaded
+      if (!(window as any).YT || !(window as any).YT.Player) {
+        setTimeout(initializePlayer, 100);
+        return;
+      }
 
-    // Otherwise, create the player and attach the "onStateChange" listener
-    ytPlayerRef.current = new (window as any).YT.Player(playerRef.current, {
-      width: "100%",
-      height: "100%",
-      videoId,
-      playerVars: {
-        controls: 1,
-        rel: 0,
-        modestbranding: 1,
-      },
-      events: {
-        onStateChange: (event: any) => {
-          // YT.PlayerState.PLAYING is 1
-          // YT.PlayerState.BUFFERING is 3
-          const playing = event.data === 1 || event.data === 3;
-          setIsPlaying(playing);
+      // If a player already exists and is working, just swap the video
+      if (
+        ytPlayerRef.current &&
+        typeof ytPlayerRef.current.loadVideoById === "function"
+      ) {
+        try {
+          ytPlayerRef.current.loadVideoById(videoId);
+          return;
+        } catch (e) {
+          console.warn("Existing player failed to load new ID, recreating...");
+        }
+      }
+
+      // Create a fresh player instance
+      new (window as any).YT.Player(playerRef.current, {
+        width: "100%",
+        height: "100%",
+        videoId,
+        playerVars: {
+          controls: 1,
+          rel: 0,
+          modestbranding: 1,
         },
-      },
-    });
+        events: {
+          onReady: (event: any) => {
+            ytPlayerRef.current = event.target;
+          },
+          onStateChange: (event: any) => {
+            const playing =
+              event.data === (window as any).YT.PlayerState.PLAYING ||
+              event.data === (window as any).YT.PlayerState.BUFFERING;
+            setIsPlaying(playing);
+          },
+        },
+      });
+    };
+
+    initializePlayer();
   }, [videoId]);
 
   return (
@@ -500,6 +567,6 @@ useEffect(() => {
       </div>
     </div>
   );
-};;
+};
 
 export default App;

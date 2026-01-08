@@ -1,8 +1,8 @@
 import React from "react";
 import { TimingItem } from "../types";
-import { getItemValidationStatus } from "../utils/Validation";
+import { getItemValidationStatus } from "../utils/validation";
 import Badge from "./ui/WarningBadge";
-import { framesToHMSMs, secondsToFrames } from "../utils/Timing";
+import { framesToHMSMs, secondsToFrames } from "../utils/timing";
 import { Play, Pause } from "lucide-react";
 import Tooltip from "./ui/Tooltip";
 
