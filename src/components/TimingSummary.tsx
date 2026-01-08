@@ -1,5 +1,5 @@
 import React from "react";
-import { framesToHMSMs } from "../utils/CalculateTime";
+import { framesToHMSMs } from "../utils/Timing";
 
 interface TimingSummaryProps {
   rtaFrames: number | null;

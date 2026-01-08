@@ -3,11 +3,12 @@ import Header from "./components/Header";
 import VideoInput from "./components/VideoInput";
 import TimingSummary from "./components/TimingSummary";
 import VideoPlayer from "./components/VideoPlayer";
-import LoadList from "./components/LoadList";
+import TimingList from "./components/TimingList";
 import ValidationWarnings from "./components/ValidationWarnings";
-import { Load, RunMarker, ValidationWarning } from "./types";
+import { Load, RunMarker, ValidationWarning, TimingItem } from "./types";
 import { extractVideoId } from "./utils/Youtube";
-import { secondsToFrames } from "./utils/CalculateTime";
+import { secondsToFrames } from "./utils/Timing";
+import { validateLoad } from "./utils/Validation";
 
 const DEFAULT_TEST_VIDEO_ID = "IfFfdSRMpQs";
 
@@ -20,10 +21,8 @@ const App = () => {
   const [showFpsHelp, setShowFpsHelp] = useState(false);
 
   const [isAutoLoadSelecting, setIsAutoLoadSelecting] = useState(true);
-  const toggleAutoLoadSelectMode = () =>
-    setIsAutoLoadSelecting(!isAutoLoadSelecting);
   const [loads, setLoads] = useState<Load[]>([]);
-  const [currentLoadIndex, setCurrentLoadIndex] = useState(0);
+  const [currentSelectedIndex, setCurrentSelectedIndex] = useState(0);
 
   const playerRef = useRef<HTMLDivElement | null>(null);
   const ytPlayerRef = useRef<any>(null);
@@ -32,28 +31,38 @@ const App = () => {
     time: null,
     offset: 0,
   });
+  const [runEnd, setRunEnd] = useState<RunMarker>({ time: null, offset: 0 });
 
-  const [runEnd, setRunEnd] = useState<RunMarker>({
-    time: null,
-    offset: 0,
-  });
-
-  const [runTimingOpen, setRunTimingOpen] = useState(true);
-
-  // Calculate adjusted run boundaries
-  const adjustedRunStart = useMemo(() => {
-    if (runStart.time === null) return null;
-    return runStart.time + runStart.offset;
-  }, [runStart]);
-
-  const adjustedRunEnd = useMemo(() => {
-    if (runEnd.time === null) return null;
-    return runEnd.time + runEnd.offset;
-  }, [runEnd]);
+  const timingItems: TimingItem[] = useMemo(() => {
+    return [
+      {
+        id: "full-run",
+        type: "run",
+        label: "Full Run",
+        startTime: runStart.time,
+        endTime: runEnd.time,
+        isDeletable: false,
+      },
+      ...loads.map((load, index) => ({
+        id: load.id.toString(),
+        type: "load" as const,
+        label: `Load ${index + 1}`,
+        startTime: load.startTime,
+        endTime: load.endTime,
+        loadIndex: index,
+        isDeletable: true,
+      })),
+    ];
+  }, [loads, runStart, runEnd]);
 
   const canExport = runStart.time !== null && runEnd.time !== null;
 
-  // ** Comprehensive validation **
+  // --- Validation Logic ---
+  const adjustedRunStart =
+    runStart.time !== null ? runStart.time + runStart.offset : null;
+  const adjustedRunEnd =
+    runEnd.time !== null ? runEnd.time + runEnd.offset : null;
+
   const {
     overlappingIndices,
     invalidDurationIndices,
@@ -65,121 +74,58 @@ const App = () => {
     const outsideRun = new Set<number>();
     const validationWarnings: ValidationWarning[] = [];
 
-    // Check if run end is before run start
-    if (adjustedRunStart !== null && adjustedRunEnd !== null) {
-      if (adjustedRunEnd <= adjustedRunStart) {
-        validationWarnings.push({
-          type: "error",
-          message: `The run end (${adjustedRunEnd.toFixed(3)}s) cannot be earlier than or equal to the run start (${adjustedRunStart.toFixed(3)}s).`,
-          affectedLoads: [],
-        });
-      }
-    }
-
-    const completeLoads = loads
-      .map((load, index) => ({ load, index }))
-      .filter(({ load }) => load.startTime !== null && load.endTime !== null);
-
-    // Check for invalid durations (0 or negative)
-    completeLoads.forEach(({ load, index }) => {
-      const duration = load.endTime! - load.startTime!;
-      if (duration <= 0) {
-        invalidDuration.add(index);
-        validationWarnings.push({
-          type: "invalid-duration",
-          message: `Load #${index + 1} has ${
-            duration === 0 ? "zero" : "negative"
-          } duration (${duration.toFixed(
-            3
-          )}s). End time must be after start time.`,
-          affectedLoads: [index],
-        });
-      }
-    });
-
-    // Check if loads are outside run boundaries
-    if (adjustedRunStart !== null && adjustedRunEnd !== null) {
-      completeLoads.forEach(({ load, index }) => {
-        const start = load.startTime!;
-        const end = load.endTime!;
-
-        const beforeRun = end <= adjustedRunStart;
-        const afterRun = start >= adjustedRunEnd;
-        const partiallyOutside =
-          start < adjustedRunStart || end > adjustedRunEnd;
-
-        if (beforeRun || afterRun || partiallyOutside) {
-          outsideRun.add(index);
-          let message = "";
-
-          if (beforeRun) {
-            message = `Load #${
-              index + 1
-            } is entirely before the run start (${adjustedRunStart.toFixed(
-              3
-            )}s).`;
-          } else if (afterRun) {
-            message = `Load #${
-              index + 1
-            } is entirely after the run end (${adjustedRunEnd.toFixed(3)}s).`;
-          } else if (start < adjustedRunStart) {
-            message = `Load #${
-              index + 1
-            } starts before the run start (${adjustedRunStart.toFixed(3)}s).`;
-          } else if (end > adjustedRunEnd) {
-            message = `Load #${
-              index + 1
-            } ends after the run end (${adjustedRunEnd.toFixed(3)}s).`;
-          }
-
-          validationWarnings.push({
-            type: "outside-run",
-            message,
-            affectedLoads: [index],
-          });
-        }
+    // Run Logic Validation
+    if (
+      adjustedRunStart !== null &&
+      adjustedRunEnd !== null &&
+      adjustedRunEnd <= adjustedRunStart
+    ) {
+      validationWarnings.push({
+        type: "error",
+        message: "Run duration must be greater than 0.",
+        affectedLoads: [],
       });
     }
 
-    // Check for overlaps
-    for (let i = 0; i < completeLoads.length; i++) {
-      for (let j = i + 1; j < completeLoads.length; j++) {
-        const load1 = completeLoads[i].load;
-        const load2 = completeLoads[j].load;
-        const idx1 = completeLoads[i].index;
-        const idx2 = completeLoads[j].index;
+    // Load Logic Validation
+    loads.forEach((_, index) => {
+      const status = validateLoad(
+        loads[index].startTime,
+        loads[index].endTime,
+        loads,
+        index,
+        adjustedRunStart,
+        adjustedRunEnd
+      );
 
-        const start1 = load1.startTime!;
-        const end1 = load1.endTime!;
-        const start2 = load2.startTime!;
-        const end2 = load2.endTime!;
+      if (status.isOverlapping) overlapping.add(index);
+      if (status.isInvalidDuration) invalidDuration.add(index);
+      if (status.isOutsideRun) outsideRun.add(index);
+    });
 
-        const hasOverlap =
-          (start1 <= start2 && end1 > start2) ||
-          (start2 <= start1 && end2 > start1);
-
-        if (hasOverlap) {
-          overlapping.add(idx1);
-          overlapping.add(idx2);
-
-          const existingWarning = validationWarnings.find(
-            (w) =>
-              w.type === "overlap" &&
-              w.affectedLoads.includes(idx1) &&
-              w.affectedLoads.includes(idx2)
-          );
-
-          if (!existingWarning) {
-            validationWarnings.push({
-              type: "overlap",
-              message: `Load #${idx1 + 1} and Load #${
-                idx2 + 1
-              } have overlapping time ranges. Please adjust the timestamps.`,
-              affectedLoads: [idx1, idx2],
-            });
-          }
-        }
-      }
+    // Generate Global Warning Messages for the Top Bar
+    if (overlapping.size > 0) {
+      validationWarnings.push({
+        type: "overlap",
+        message: `Loads ${Array.from(overlapping)
+          .map((i) => i + 1)
+          .join(", ")} have overlapping timeframes.`,
+        affectedLoads: Array.from(overlapping),
+      });
+    }
+    if (invalidDuration.size > 0) {
+      validationWarnings.push({
+        type: "invalid-duration",
+        message: "One or more loads have a negative or zero duration.",
+        affectedLoads: Array.from(invalidDuration),
+      });
+    }
+    if (outsideRun.size > 0) {
+      validationWarnings.push({
+        type: "outside-run",
+        message: "Some loads occur before the Run Start or after the Run End.",
+        affectedLoads: Array.from(outsideRun),
+      });
     }
 
     return {
@@ -190,281 +136,180 @@ const App = () => {
     };
   }, [loads, adjustedRunStart, adjustedRunEnd]);
 
-  // Total load time in frames
+  // --- Frame Calculations ---
   const totalLoadFrames = useMemo(() => {
     return loads.reduce((sum, load) => {
       if (load.startTime !== null && load.endTime !== null) {
-        const start = secondsToFrames(load.startTime, fps);
-        const end = secondsToFrames(load.endTime, fps);
-        return sum + (end - start);
+        return (
+          sum +
+          (secondsToFrames(load.endTime, fps) -
+            secondsToFrames(load.startTime, fps))
+        );
       }
       return sum;
     }, 0);
   }, [loads, fps]);
 
+  const adjustedRunStartFrames =
+    adjustedRunStart !== null ? secondsToFrames(adjustedRunStart, fps) : null;
+  const adjustedRunEndFrames =
+    adjustedRunEnd !== null ? secondsToFrames(adjustedRunEnd, fps) : null;
+  const rtaFrames =
+    adjustedRunStartFrames !== null && adjustedRunEndFrames !== null
+      ? adjustedRunEndFrames - adjustedRunStartFrames
+      : null;
+  const lrtFrames = rtaFrames !== null ? rtaFrames - totalLoadFrames : null;
+
+  // --- Handlers ---
   const handleLoadVideo = () => {
     if (!videoUrl.trim()) {
       setVideoId(DEFAULT_TEST_VIDEO_ID);
       setUrlError("");
       return;
     }
-
     const id = extractVideoId(videoUrl);
-
-    if (!id) {
+    if (id) {
+      setVideoId(id);
+      setUrlError("");
+    } else {
       setVideoId(null);
       setUrlError("Invalid YouTube URL");
-      return;
     }
-
-    setVideoId(id);
-    setUrlError("");
   };
 
-  const markLoadStart = () => handleMarkLoad("start");
-  const markLoadEnd = () => handleMarkLoad("end");
-
-  const handleMarkLoad = (type: "start" | "end") => {
+  const handleMarkTime = (type: "start" | "end") => {
     if (!ytPlayerRef.current?.getCurrentTime) return;
     const time = ytPlayerRef.current.getCurrentTime();
+    const currentItem = timingItems[currentSelectedIndex];
+    if (!currentItem) return;
 
-    // If no loads exist, create one first
-    let currentLoads = loads;
-    let activeIndex = currentLoadIndex;
-
-    if (loads.length === 0) {
-      const newLoad: Load = { id: Date.now(), startTime: null, endTime: null };
-      currentLoads = [newLoad];
-      activeIndex = 0;
-    }
-
-    // Apply the timestamp
-    const updated = [...currentLoads];
-    updated[activeIndex] = {
-      ...updated[activeIndex],
-      [type === "start" ? "startTime" : "endTime"]: time,
-    };
-
-    // Update state
-    setLoads(updated);
-    if (loads.length === 0) setCurrentLoadIndex(0);
-
-    // Try to auto-advance if valid
-    tryAddNewLoad(updated, activeIndex);
-  };
-
-  const tryAddNewLoad = (updatedLoads: Load[], index: number) => {
-    if (!isAutoLoadSelecting) return;
-
-    const isValid = isLoadValid(index, updatedLoads);
-    if (isValid) {
-      // We use a functional update to avoid closure staleness
-      const newLoad: Load = { id: Date.now(), startTime: null, endTime: null };
-      setLoads([...updatedLoads, newLoad]);
-      setCurrentLoadIndex(updatedLoads.length);
-    }
-  };
-
-  const addNewLoad = () => {
-    const newLoad: Load = { id: Date.now(), startTime: null, endTime: null };
-    const updated = [...loads, newLoad];
-    setLoads(updated);
-    setCurrentLoadIndex(updated.length - 1);
-    return updated;
-  };
-
-  const deleteLoad = (index: number) => {
-    const updated = loads.filter((_, i) => i !== index);
-    setLoads(updated);
-    setCurrentLoadIndex(Math.max(0, updated.length - 1));
-  };
-
-  const isLoadValid = (index: number, allLoads: Load[]) => {
-    const load = allLoads[index];
-    if (load.startTime === null || load.endTime === null) return false;
-
-    // Check Duration
-    if (load.endTime <= load.startTime) return false;
-
-    // Check Run Boundaries (using the same logic as your useMemo)
-    if (
-      adjustedRunStart !== null &&
-      (load.startTime < adjustedRunStart || load.endTime > adjustedRunEnd!)
-    ) {
-      return false;
-    }
-
-    // Check Overlaps with ALL other loads
-    const hasOverlap = allLoads.some((otherLoad, otherIdx) => {
-      if (
-        index === otherIdx ||
-        otherLoad.startTime === null ||
-        otherLoad.endTime === null
-      )
-        return false;
-      return (
-        load.startTime! < otherLoad.endTime! &&
-        load.endTime! > otherLoad.startTime!
+    if (currentItem.type === "run") {
+      if (type === "start") setRunStart((prev) => ({ ...prev, time }));
+      else setRunEnd((prev) => ({ ...prev, time }));
+    } else {
+      setLoads((prev) =>
+        prev.map((load, idx) =>
+          idx === currentItem.loadIndex
+            ? { ...load, [type === "start" ? "startTime" : "endTime"]: time }
+            : load
+        )
       );
-    });
+    }
 
-    return !hasOverlap;
+    // Auto-Advance Logic
+    const isLastItem = currentSelectedIndex === timingItems.length - 1;
+    if (isAutoLoadSelecting && isLastItem) {
+      const isCompleting =
+        type === "start"
+          ? currentItem.endTime !== null
+          : currentItem.startTime !== null;
+      if (isCompleting) {
+        const start = type === "start" ? time : currentItem.startTime;
+        const end = type === "end" ? time : currentItem.endTime;
+
+        const { hasError } = validateLoad(
+          start,
+          end,
+          loads,
+          currentItem.loadIndex ?? -1,
+          adjustedRunStart,
+          adjustedRunEnd
+        );
+        if (!hasError) handleAddLoad();
+      }
+    }
   };
 
-  const jumpToTime = (time: number, index: number) => {
-    ytPlayerRef.current?.seekTo?.(time, true);
-    setCurrentLoadIndex(index);
+  const handleAddLoad = () => {
+    const newLoad: Load = { id: Date.now(), startTime: null, endTime: null };
+    setLoads((prev) => [...prev, newLoad]);
+    setCurrentSelectedIndex(loads.length + 1);
   };
 
-  const markRunStart = () => {
-    if (!ytPlayerRef.current?.getCurrentTime) return;
-    setRunStart({ ...runStart, time: ytPlayerRef.current.getCurrentTime() });
+  const handleDeleteItem = (id: string) => {
+    setLoads((prev) => prev.filter((l) => l.id.toString() !== id));
+    setCurrentSelectedIndex(0);
   };
 
-  const markRunEnd = () => {
-    if (!ytPlayerRef.current?.getCurrentTime) return;
-    setRunEnd({ ...runEnd, time: ytPlayerRef.current.getCurrentTime() });
-  };
-
-  const adjustedRunStartFrames = useMemo(() => {
-    if (runStart.time === null) return null;
-    return (
-      secondsToFrames(runStart.time, fps) +
-      secondsToFrames(runStart.offset, fps)
-    );
-  }, [runStart, fps]);
-
-  const adjustedRunEndFrames = useMemo(() => {
-    if (runEnd.time === null) return null;
-    return (
-      secondsToFrames(runEnd.time, fps) + secondsToFrames(runEnd.offset, fps)
-    );
-  }, [runEnd, fps]);
-
-  const rtaFrames = useMemo(() => {
-    if (adjustedRunStartFrames === null || adjustedRunEndFrames === null)
-      return null;
-    return adjustedRunEndFrames - adjustedRunStartFrames;
-  }, [adjustedRunStartFrames, adjustedRunEndFrames]);
-
-  const lrtFrames = useMemo(() => {
-    if (rtaFrames === null) return null;
-    return rtaFrames - totalLoadFrames;
-  }, [rtaFrames, totalLoadFrames]);
-
-  // Save all data to JSON
   const exportToJson = () => {
     const data = {
-      videoId: videoId,
-      fps: fps,
-      runStart: runStart,
-      runEnd: runEnd,
-      loads: loads,
+      videoId,
+      fps,
+      runStart,
+      runEnd,
+      loads,
       exportedAt: new Date().toISOString(),
-      // Include the final calculated times for convenience
-      summary: {
-        totalLoadFrames,
-        rtaFrames,
-        lrtFrames,
-      },
+      summary: { totalLoadFrames, rtaFrames, lrtFrames },
     };
-
-    // Create a blob and a download link
-    const fileName = `timing-data-${videoId || "export"}.json`;
-    const json = JSON.stringify(data, null, 2);
-    const blob = new Blob([json], { type: "application/json" });
+    const blob = new Blob([JSON.stringify(data, null, 2)], {
+      type: "application/json",
+    });
     const href = URL.createObjectURL(blob);
-
-    // Trigger the download
     const link = document.createElement("a");
     link.href = href;
-    link.download = fileName;
+    link.download = `timing-${videoId}.json`;
     document.body.appendChild(link);
     link.click();
-
     document.body.removeChild(link);
     URL.revokeObjectURL(href);
   };
 
-  // Import handler
   const handleImport = (data: any) => {
-    if (!data) return;
-
-    // Update Video ID
     if (data.videoId) {
-      const fullUrl = `https://www.youtube.com/watch?v=${data.videoId}`;
-      setVideoUrl(fullUrl);
-      setTimeout(() => {
-        handleLoadVideo();
-      }, 100);
+      setVideoUrl(`https://www.youtube.com/watch?v=${data.videoId}`);
+      setTimeout(handleLoadVideo, 100);
     }
-
-    // Update Metadata
     if (data.fps) setFps(data.fps);
-
-    // Update Timing Markers
     if (data.runStart) setRunStart(data.runStart);
     if (data.runEnd) setRunEnd(data.runEnd);
-
-    // Update Load List
     if (data.loads) {
       setLoads(data.loads);
-      setCurrentLoadIndex(0); // Reset focus to the first load
+      setCurrentSelectedIndex(0);
     }
   };
 
+  // --- Effects ---
   useEffect(() => {
     const tag = document.createElement("script");
     tag.src = "https://www.youtube.com/iframe_api";
     document.body.appendChild(tag);
   }, []);
 
-  // Input consumption
   useEffect(() => {
-    const handleGlobalKeyDown = (e: KeyboardEvent) => {
-      // Don't trigger if the user is typing in an input or textarea
-      const activeElem = document.activeElement;
-      const isTyping =
-        activeElem?.tagName === "INPUT" || activeElem?.tagName === "TEXTAREA";
-
-      // Allow Space to work even if focused on a button, but NOT if typing in an input
-      if (isTyping) return;
-
+    const handleKey = (e: KeyboardEvent) => {
+      const active = document.activeElement;
+      if (active?.tagName === "INPUT" || active?.tagName === "TEXTAREA") return;
       if (!ytPlayerRef.current) return;
 
       switch (e.key) {
-        case " ": // Space to Toggle Play/Pause
-          e.preventDefault(); // Prevent page scroll
-          const state = ytPlayerRef.current.getPlayerState();
-          if (state === 1) ytPlayerRef.current.pauseVideo();
-          else ytPlayerRef.current.playVideo();
+        case " ":
+          e.preventDefault();
+          ytPlayerRef.current.getPlayerState() === 1
+            ? ytPlayerRef.current.pauseVideo()
+            : ytPlayerRef.current.playVideo();
           break;
-
-        case "ArrowLeft": // Seek Back 5s
+        case "ArrowLeft":
           e.preventDefault();
           ytPlayerRef.current.seekTo(
             ytPlayerRef.current.getCurrentTime() - 5,
             true
           );
           break;
-
-        case "ArrowRight": // Seek Forward 5s
+        case "ArrowRight":
           e.preventDefault();
           ytPlayerRef.current.seekTo(
             ytPlayerRef.current.getCurrentTime() + 5,
             true
           );
           break;
-
-        case ",": // Frame Back (1/FPS)
+        case ",":
           ytPlayerRef.current.pauseVideo();
           ytPlayerRef.current.seekTo(
             ytPlayerRef.current.getCurrentTime() - 1 / fps,
             true
           );
           break;
-
-        case ".": // Frame Forward (1/FPS)
+        case ".":
           ytPlayerRef.current.pauseVideo();
           ytPlayerRef.current.seekTo(
             ytPlayerRef.current.getCurrentTime() + 1 / fps,
@@ -473,35 +318,21 @@ const App = () => {
           break;
       }
     };
-
-    window.addEventListener("keydown", handleGlobalKeyDown);
-    return () => window.removeEventListener("keydown", handleGlobalKeyDown);
-  }, [fps]); // Re-bind if FPS changes to keep frame stepping accurate
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, [fps]);
 
   useEffect(() => {
     if (!videoId || !(window as any).YT) return;
-
     if (ytPlayerRef.current?.loadVideoById) {
       ytPlayerRef.current.loadVideoById(videoId);
       return;
     }
-
-    if (!playerRef.current) return;
-
     ytPlayerRef.current = new (window as any).YT.Player(playerRef.current, {
       width: "100%",
       videoId,
-      playerVars: {
-        controls: 1,
-      },
+      playerVars: { controls: 1 },
     });
-
-    return () => {
-      if (ytPlayerRef.current) {
-        ytPlayerRef.current.destroy();
-        ytPlayerRef.current = null;
-      }
-    };
   }, [videoId]);
 
   return (
@@ -514,7 +345,6 @@ const App = () => {
           onImport={handleImport}
           canExport={canExport}
         />
-
         <VideoInput
           videoUrl={videoUrl}
           setVideoUrl={setVideoUrl}
@@ -528,7 +358,6 @@ const App = () => {
         />
 
         <TimingSummary rtaFrames={rtaFrames} lrtFrames={lrtFrames} fps={fps} />
-
         <ValidationWarnings warnings={warnings} />
 
         {videoId && (
@@ -536,38 +365,51 @@ const App = () => {
             <VideoPlayer
               playerRef={playerRef}
               mode={mode}
-              fps={fps}
-              runStart={runStart}
-              setRunStart={setRunStart}
-              runEnd={runEnd}
-              setRunEnd={setRunEnd}
-              runTimingOpen={runTimingOpen}
-              setRunTimingOpen={setRunTimingOpen}
-              onMarkRunStart={markRunStart}
-              onMarkRunEnd={markRunEnd}
-              onMarkLoadStart={markLoadStart}
-              onMarkLoadEnd={markLoadEnd}
-              onJumpToTime={(time) => ytPlayerRef.current?.seekTo?.(time, true)}
-              currentLoadIndex={currentLoadIndex}
-              loads={loads}
+              currentItem={timingItems[currentSelectedIndex]}
+              onMarkTime={handleMarkTime}
               overlappingLoadIndices={overlappingIndices}
               invalidDurationIndices={invalidDurationIndices}
               outsideRunIndices={outsideRunIndices}
             />
 
-            <LoadList
-              loads={loads}
-              currentLoadIndex={currentLoadIndex}
+            <TimingList
+              items={timingItems}
+              currentIndex={currentSelectedIndex}
               mode={mode}
+              onSelectItem={(id) =>
+                setCurrentSelectedIndex(
+                  timingItems.findIndex((i) => i.id === id)
+                )
+              }
+              onJumpToTime={(time, itemId) => {
+                // Video Actions
+                if (ytPlayerRef.current) {
+                  ytPlayerRef.current.seekTo(time, true);
+                  ytPlayerRef.current.pauseVideo();
+                }
+
+                // Selection Logic
+                if (itemId === "full-run") {
+                  setCurrentSelectedIndex(0);
+                } else {
+                  const loadIdx = loads.findIndex(
+                    (l) => l.id.toString() === itemId
+                  );
+                  if (loadIdx !== -1) {
+                    setCurrentSelectedIndex(loadIdx + 1);
+                  }
+                }
+              }}
+              onAddLoad={handleAddLoad}
+              onDeleteItem={handleDeleteItem}
               overlappingLoadIndices={overlappingIndices}
               invalidDurationIndices={invalidDurationIndices}
               outsideRunIndices={outsideRunIndices}
-              onAddLoad={addNewLoad}
-              onDeleteLoad={deleteLoad}
-              onJumpToTime={jumpToTime}
-              onSelectLoad={setCurrentLoadIndex}
-              onAutoSelectLoad={toggleAutoLoadSelectMode}
               isAutoLoadSelecting={isAutoLoadSelecting}
+              onAutoSelectLoad={() =>
+                setIsAutoLoadSelecting(!isAutoLoadSelecting)
+              }
+              fps={fps}
             />
           </div>
         )}
