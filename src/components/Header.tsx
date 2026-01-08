@@ -1,5 +1,5 @@
 import React, { useRef } from "react";
-import { Download, Upload } from "lucide-react";
+import { Download, Trash2, Upload } from "lucide-react";
 import Tooltip from "./ui/Tooltip";
 
 interface HeaderProps {
@@ -8,6 +8,7 @@ interface HeaderProps {
   onDownload: () => void;
   onImport: (json: any) => void;
   canExport: boolean;
+  onReset: () => void;
 }
 
 const Header: React.FC<HeaderProps> = ({
@@ -16,6 +17,7 @@ const Header: React.FC<HeaderProps> = ({
   onDownload,
   onImport,
   canExport,
+  onReset,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -121,6 +123,14 @@ const Header: React.FC<HeaderProps> = ({
             </button>
           </Tooltip>
         </div>
+        <button
+          onClick={onReset}
+          className="flex items-center gap-2 px-3 py-2 bg-slate-700 hover:bg-red-900/40 text-slate-300 hover:text-red-400 rounded-lg transition-colors border border-slate-600"
+          title="Clear all data"
+        >
+          <Trash2 size={18} />
+          <span className="hidden sm:inline">Reset</span>
+        </button>
       </div>
     </div>
   );

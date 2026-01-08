@@ -42,13 +42,14 @@ const App = () => {
     "yt_video_id",
     null
   );
+  const [currentSelectedIndex, setCurrentSelectedIndex] =
+    usePersistentState<number>("yt_selected_index", 0);
 
   // Non-Persistent States
   const [mode, setMode] = useState<"runner" | "verifier">("runner");
   const [urlError, setUrlError] = useState("");
   const [showFpsHelp, setShowFpsHelp] = useState(false);
   const [isAutoLoadSelecting, setIsAutoLoadSelecting] = useState(true);
-  const [currentSelectedIndex, setCurrentSelectedIndex] = useState(0);
   const playerRef = useRef<HTMLDivElement | null>(null);
   const ytPlayerRef = useRef<any>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -339,6 +340,21 @@ const App = () => {
     }
   };
 
+  const handleResetAll = () => {
+    if (
+      window.confirm(
+        "Are you sure you want to clear all data? This cannot be undone."
+      )
+    ) {
+      setVideoUrl("");
+      setVideoId(null);
+      setRunStart({ time: null, offset: 0 });
+      setRunEnd({ time: null, offset: 0 });
+      setLoads([]);
+      setCurrentSelectedIndex(0);
+    }
+  };
+
   // --- Effects ---
   useEffect(() => {
     if (
@@ -509,6 +525,7 @@ const App = () => {
           onDownload={exportToJson}
           onImport={handleImport}
           canExport={canExport}
+          onReset={handleResetAll}
         />
         <VideoInput
           videoUrl={videoUrl}
