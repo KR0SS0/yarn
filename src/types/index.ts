@@ -19,6 +19,13 @@ export interface TimingItem {
   isDeletable: boolean;
 }
 
+export interface VerifierSettings {
+  checkBeforeStart: boolean;
+  checkAfterStart: boolean;
+  checkBeforeEnd: boolean;
+  checkAfterEnd: boolean;
+}
+
 export type ValidationType = "overlap" | "invalid-duration" | "outside-run" | "error";
 
 export interface ValidationWarning {

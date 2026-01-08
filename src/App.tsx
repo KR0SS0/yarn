@@ -11,7 +11,13 @@ import TimingSummary from "./components/TimingSummary";
 import VideoPlayer from "./components/VideoPlayer";
 import TimingList from "./components/TimingList";
 import ValidationWarnings from "./components/ValidationWarnings";
-import { Load, RunMarker, ValidationWarning, TimingItem } from "./types";
+import {
+  Load,
+  RunMarker,
+  ValidationWarning,
+  TimingItem,
+  VerifierSettings,
+} from "./types";
 import { extractVideoId } from "./utils/youtube";
 import { secondsToFrames } from "./utils/timing";
 import { validateLoad } from "./utils/validation";
@@ -50,6 +56,14 @@ const App = () => {
   const [urlError, setUrlError] = useState("");
   const [showFpsHelp, setShowFpsHelp] = useState(false);
   const [isAutoLoadSelecting, setIsAutoLoadSelecting] = useState(true);
+
+  const [verifierSettings, setVerifierSettings] =
+    usePersistentState<VerifierSettings>("yt_verifier_settings", {
+      checkBeforeStart: true,
+      checkAfterStart: false,
+      checkBeforeEnd: false,
+      checkAfterEnd: true,
+    });
 
   // ytPlayerRef stores the actual YouTube API instance
   const ytPlayerRef = useRef<any>(null);
@@ -183,6 +197,14 @@ const App = () => {
       : null;
   const lrtFrames = rtaFrames !== null ? rtaFrames - totalLoadFrames : null;
 
+  // Logic to jump to specific verification points
+  const jumpToVerify = (time: number | null, frameOffset: number) => {
+    if (time === null || !ytPlayerRef.current) return;
+    const targetTime = time + frameOffset / fps;
+    ytPlayerRef.current.seekTo(targetTime, true);
+    ytPlayerRef.current.pauseVideo();
+  };
+
   // --- Handlers ---
   const handleLoadVideo = useCallback(() => {
     const trimmedUrl = videoUrl?.trim();
@@ -268,8 +290,19 @@ const App = () => {
   };
 
   const handleDeleteItem = (id: string) => {
+    // Capture the index from the CURRENT timingItems before any state changes
+    const indexToDelete = timingItems.findIndex((item) => item.id === id);
+    if (indexToDelete === -1) return;
+
+    // Adjust currentSelectedIndex if necessary
+    if (indexToDelete === currentSelectedIndex) {
+      const newLastIndex = Math.max(0, loads.length - 1);
+      setCurrentSelectedIndex(newLastIndex);
+    } else if (indexToDelete < currentSelectedIndex) {
+      setCurrentSelectedIndex((prev) => prev - 1);
+    }
+
     setLoads((prev) => prev.filter((l) => l.id.toString() !== id));
-    setCurrentSelectedIndex(0);
   };
 
   const handleJumpToTime = (time: number, itemId: string) => {
@@ -283,6 +316,78 @@ const App = () => {
     const itemIndex = timingItems.findIndex((item) => item.id === itemId);
     if (itemIndex !== -1) {
       setCurrentSelectedIndex(itemIndex);
+    }
+  };
+
+  const handleCycleVerifier = (direction: "next" | "prev") => {
+    const current = timingItems[currentSelectedIndex];
+    if (!current) return;
+
+    const getActivePoints = (item: TimingItem) =>
+      [
+        {
+          time: item.startTime,
+          offset: -1,
+          active: verifierSettings.checkBeforeStart,
+        },
+        { time: item.startTime, offset: 0, active: true },
+        {
+          time: item.startTime,
+          offset: 1,
+          active: verifierSettings.checkAfterStart,
+        },
+        {
+          time: item.endTime,
+          offset: -1,
+          active: verifierSettings.checkBeforeEnd,
+        },
+        { time: item.endTime, offset: 0, active: true },
+        { time: item.endTime, offset: 1, active: verifierSettings.checkAfterEnd },
+      ].filter((p) => p.time !== null && p.active);
+
+    const activePoints = getActivePoints(current);
+    if (activePoints.length === 0) return;
+
+    const currentTime = ytPlayerRef.current?.getCurrentTime() || 0;
+
+    if (direction === "next") {
+      // Try to find the next point in the current item
+      const targetPoint = activePoints.find(
+        (p) => p.time! + p.offset / fps > currentTime + 0.001
+      );
+
+      if (targetPoint) {
+        jumpToVerify(targetPoint.time, targetPoint.offset);
+      } else {
+        // If no points left, go to the NEXT LOAD
+        const nextIndex = currentSelectedIndex + 1;
+        if (nextIndex < timingItems.length) {
+          setCurrentSelectedIndex(nextIndex);
+          const nextItemPoints = getActivePoints(timingItems[nextIndex]);
+          if (nextItemPoints.length > 0) {
+            jumpToVerify(nextItemPoints[0].time, nextItemPoints[0].offset);
+          }
+        }
+      }
+    } else {
+      // Reverse of above
+      const targetPoint = [...activePoints]
+        .reverse()
+        .find((p) => p.time! + p.offset / fps < currentTime - 0.001);
+
+      if (targetPoint) {
+        jumpToVerify(targetPoint.time, targetPoint.offset);
+      } else {
+        const prevIndex = currentSelectedIndex - 1;
+        if (prevIndex >= 0) {
+          setCurrentSelectedIndex(prevIndex);
+          const prevItemPoints = getActivePoints(timingItems[prevIndex]);
+          if (prevItemPoints.length > 0) {
+            const lastPoint = prevItemPoints[prevItemPoints.length - 1];
+            jumpToVerify(lastPoint.time, lastPoint.offset);
+          }
+        }
+      }
     }
   };
 
@@ -312,7 +417,37 @@ const App = () => {
     }
   };
 
-  const exportToJson = () => {
+  const handleSelectAndVerify = (id: string) => {
+    const itemIndex = timingItems.findIndex((i) => i.id === id);
+    if (itemIndex === -1) return;
+
+    setCurrentSelectedIndex(itemIndex);
+    const item = timingItems[itemIndex];
+
+    if (mode === "verifier") {
+      // Define points for this specific item
+      const activePoints = [
+        { time: item.startTime, offset: -1, active: verifierSettings.checkBeforeStart },
+        { time: item.startTime, offset: 0,  active: true },
+        { time: item.startTime, offset: 1,  active: verifierSettings.checkAfterStart },
+        { time: item.endTime,   offset: -1, active: verifierSettings.checkBeforeEnd },
+        { time: item.endTime,   offset: 0,  active: true },
+        { time: item.endTime,   offset: 1,  active: verifierSettings.checkAfterEnd },
+      ].filter(p => p.time !== null && p.active);
+
+      // Jump to the very first available checkpoint
+      if (activePoints.length > 0) {
+        jumpToVerify(activePoints[0].time, activePoints[0].offset);
+      }
+    } else {
+      // Normal runner mode behavior
+      if (item.startTime !== null) {
+        ytPlayerRef.current?.seekTo(item.startTime, true);
+      }
+    }
+  };
+
+  const handleExportToJson = () => {
     const data = {
       videoId,
       fps,
@@ -526,7 +661,7 @@ const App = () => {
         <Header
           mode={mode}
           setMode={setMode}
-          onDownload={exportToJson}
+          onDownload={handleExportToJson}
           onImport={handleImport}
           canExport={canExport}
           onReset={handleResetAll}
@@ -560,17 +695,16 @@ const App = () => {
               onJumpToTime={handleJumpToTime}
               onControlAction={handleControlAction}
               isPlaying={isPlaying}
+              verifierSettings={verifierSettings}
+              setVerifierSettings={setVerifierSettings}
+              jumpToVerify={jumpToVerify}
+              onCycle={handleCycleVerifier}
             />
 
             <TimingList
               items={timingItems}
               currentIndex={currentSelectedIndex}
               mode={mode}
-              onSelectItem={(id) =>
-                setCurrentSelectedIndex(
-                  timingItems.findIndex((i) => i.id === id)
-                )
-              }
               onJumpToTime={handleJumpToTime}
               onAddLoad={handleAddLoad}
               onDeleteItem={handleDeleteItem}
@@ -582,6 +716,7 @@ const App = () => {
                 setIsAutoLoadSelecting(!isAutoLoadSelecting)
               }
               fps={fps}
+              onSelectItem={handleSelectAndVerify}
             />
           </div>
         )}

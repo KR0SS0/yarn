@@ -1,5 +1,5 @@
 import React from "react";
-import { Trash2, Flag } from "lucide-react";
+import { Trash2, Flag } from "lucide-react"; // Added CheckCircle for a "Verified" feel later
 import { TimingItem } from "../types";
 import { getItemValidationStatus } from "../utils/validation";
 import { framesToHMSMs, secondsToFrames } from "../utils/timing";
@@ -37,11 +37,18 @@ const TimingList: React.FC<TimingListProps> = ({
   onAutoSelectLoad,
   fps,
 }) => {
+  const isVerifier = mode === "verifier";
+
   return (
     <div className="bg-slate-800 rounded-lg shadow-2xl p-6 lg:col-span-1 border border-slate-700 flex flex-col h-[calc(100vh-14rem)]">
       <div className="flex justify-between items-center mb-4 shrink-0">
-        <h2 className="text-xl font-bold text-white">Timing Markers</h2>
-        {mode === "runner" && (
+        <div className="flex flex-col">
+          <h2 className="text-xl font-bold text-white">
+            {isVerifier ? "Verification" : "Timing Markers"}
+          </h2>
+        </div>
+
+        {!isVerifier && (
           <div className="flex items-center gap-3">
             <Tooltip text="Auto-add new Load markers when current is finished">
               <div className="flex items-center gap-2 bg-slate-900/50 px-2 py-1 rounded-md border border-slate-700">
@@ -51,10 +58,14 @@ const TimingList: React.FC<TimingListProps> = ({
                 <button
                   onClick={onAutoSelectLoad}
                   onMouseDown={(e) => e.preventDefault()}
-                  className={`relative inline-flex h-4 w-7 items-center rounded-full transition-colors ${isAutoLoadSelecting ? "bg-green-500" : "bg-slate-600"}`}
+                  className={`relative inline-flex h-4 w-7 items-center rounded-full transition-colors ${
+                    isAutoLoadSelecting ? "bg-green-500" : "bg-slate-600"
+                  }`}
                 >
                   <span
-                    className={`inline-block h-2 w-2 transform rounded-full bg-white transition-transform ${isAutoLoadSelecting ? "translate-x-4" : "translate-x-1"}`}
+                    className={`inline-block h-2 w-2 transform rounded-full bg-white transition-transform ${
+                      isAutoLoadSelecting ? "translate-x-4" : "translate-x-1"
+                    }`}
                   />
                 </button>
               </div>
@@ -84,7 +95,7 @@ const TimingList: React.FC<TimingListProps> = ({
             <div
               key={item.id}
               onClick={() => onSelectItem(item.id)}
-              className={`p-3 rounded-lg transition cursor-pointer border-2 mx-1 ${
+              className={`p-3 rounded-lg transition cursor-pointer border-2 mx-1 relative group ${
                 isSelected
                   ? status.hasError
                     ? "bg-red-900/40 border-red-500"
@@ -93,7 +104,7 @@ const TimingList: React.FC<TimingListProps> = ({
                       : "bg-blue-900/40 border-blue-500"
                   : status.hasError
                     ? "bg-red-900/20 border-red-900/50"
-                    : "bg-slate-700/50 hover:bg-slate-700 border-transparent"
+                    : "bg-slate-700/50 hover:bg-slate-700 border-transparent shadow-sm"
               }`}
             >
               <div className="flex justify-between items-start mb-3">
@@ -104,14 +115,17 @@ const TimingList: React.FC<TimingListProps> = ({
                       <span>{item.label}</span>
                     </div>
                   ) : (
-                    <div className="flex items-center">
-                      <span>Load</span>
-                      <span>&nbsp;#{item.loadIndex! + 1}</span>
+                    <div className="flex items-center gap-2">
+                      <div
+                        className={`w-1.5 h-1.5 rounded-full ${isSelected ? "bg-blue-400 animate-pulse" : "bg-slate-500"}`}
+                      />
+                      <span>Load #{item.loadIndex! + 1}</span>
                     </div>
                   )}
                 </span>
+
                 <div className="flex flex-row-reverse flex-wrap gap-1 items-center max-w-[50%]">
-                  {mode === "runner" && item.isDeletable && (
+                  {!isVerifier && item.isDeletable && (
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
@@ -128,6 +142,12 @@ const TimingList: React.FC<TimingListProps> = ({
                   {status.isInvalidDuration && (
                     <Badge type="invalid-duration" />
                   )}
+                  {/* Visual indicator for which one is being verified */}
+                  {isVerifier && isSelected && (
+                    <span className="text-[9px] bg-blue-500 text-white px-1.5 py-0.5 rounded font-bold animate-pulse uppercase">
+                      Auditing
+                    </span>
+                  )}
                 </div>
               </div>
 
@@ -136,6 +156,7 @@ const TimingList: React.FC<TimingListProps> = ({
                   label="Start"
                   time={item.startTime}
                   fps={fps}
+                  // In verifier mode, clicking the time jumps to the "0 offset" marker
                   onClick={() => onJumpToTime(item.startTime!, item.id)}
                 />
                 <TimeAction
@@ -149,7 +170,13 @@ const TimingList: React.FC<TimingListProps> = ({
                     Duration
                   </span>
                   <span
-                    className={`font-mono mt-0.5 ${item.startTime !== null && item.endTime !== null ? "text-yellow-500/90" : "text-slate-600"}`}
+                    className={`font-mono mt-0.5 ${
+                      item.startTime !== null && item.endTime !== null
+                        ? isSelected
+                          ? "text-white"
+                          : "text-yellow-500/90"
+                        : "text-slate-600"
+                    }`}
                   >
                     {item.startTime !== null && item.endTime !== null
                       ? framesToHMSMs(
