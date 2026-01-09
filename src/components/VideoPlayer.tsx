@@ -142,9 +142,80 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
           </div>
         </div>
 
+        { /* Custom Playback Controls Section */ }
+        <div className="flex flex-col gap-2 bg-slate-900/30 p-2 rounded-lg border border-slate-700/50">
+          <div className="flex gap-1 items-center justify-between">
+            <ControlButton
+              label="-10s"
+              onClick={() => onControlAction("seek", -10)}
+              shortcut="J"
+            />
+            <ControlButton
+              label="-5s"
+              onClick={() => onControlAction("seek", -5)}
+              shortcut="←"
+            />
+            <ControlButton
+              label="-1s"
+              onClick={() => onControlAction("seek", -1)}
+            />
+            <ControlButton
+              label="-5f"
+              onClick={() => onControlAction("frame", -5)}
+            />
+            <ControlButton
+              label="-1f"
+              onClick={() => onControlAction("frame", -1)}
+              shortcut=","
+            />
+
+            <Tooltip text="Space" className="flex-[1.5]">
+              <button
+                onClick={() => onControlAction("togglePause", 0)}
+                onMouseDown={(e) => e.preventDefault()}
+                className="w-full py-2 bg-slate-700 hover:bg-slate-600 text-white rounded transition-all active:scale-95 border border-slate-600 flex justify-center items-center"
+              >
+                {isPlaying ? (
+                  <Pause size={18} fill="currentColor" />
+                ) : (
+                  <Play
+                    size={18}
+                    fill="currentColor"
+                    className="translate-x-0.5"
+                  />
+                )}
+              </button>
+            </Tooltip>
+
+            <ControlButton
+              label="+1f"
+              onClick={() => onControlAction("frame", 1)}
+              shortcut="."
+            />
+            <ControlButton
+              label="+5f"
+              onClick={() => onControlAction("frame", 5)}
+            />
+            <ControlButton
+              label="+1s"
+              onClick={() => onControlAction("seek", 1)}
+            />
+            <ControlButton
+              label="+5s"
+              onClick={() => onControlAction("seek", 5)}
+              shortcut="→"
+            />
+            <ControlButton
+              label="+10s"
+              onClick={() => onControlAction("seek", 10)}
+              shortcut="L"
+            />
+          </div>
+        </div>
+
         {isVerifier ? (
           <div className="flex flex-col gap-4 bg-blue-900/10 p-4 rounded-lg border border-blue-500/30">
-            {/* TOP ROW: Navigation & Jump Actions */}
+            {/* Top Row: Navigation & Jump Actions */}
             <div className="flex items-center gap-6">
               {/* Cycle Navigation */}
               <div className="flex items-center bg-slate-900 rounded-lg p-1 border border-slate-700 shadow-sm shrink-0">
@@ -223,7 +294,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
               </div>
             </div>
 
-            {/* BOTTOM ROW: Cycle Rules (Pill Toggles) */}
+            {/* Bottom Row: Cycle Rules (Pill Toggles) */}
             <div className="flex items-center justify-between px-4 py-2 bg-slate-900/60 rounded-full border border-slate-700/50">
               <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wide">
                 Always cycle between:
@@ -275,78 +346,8 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
             </div>
           </div>
         ) : (
-          /* RUNNER CONTROLS: Original Playback & Mark Buttons */
+          /* Runner Controls: Mark Buttons */
           <>
-            <div className="flex flex-col gap-2 bg-slate-900/30 p-2 rounded-lg border border-slate-700/50">
-              <div className="flex gap-1 items-center justify-between">
-                <ControlButton
-                  label="-10s"
-                  onClick={() => onControlAction("seek", -10)}
-                  shortcut="J"
-                />
-                <ControlButton
-                  label="-5s"
-                  onClick={() => onControlAction("seek", -5)}
-                  shortcut="←"
-                />
-                <ControlButton
-                  label="-1s"
-                  onClick={() => onControlAction("seek", -1)}
-                />
-                <ControlButton
-                  label="-5f"
-                  onClick={() => onControlAction("frame", -5)}
-                />
-                <ControlButton
-                  label="-1f"
-                  onClick={() => onControlAction("frame", -1)}
-                  shortcut=","
-                />
-
-                <Tooltip text="Space" className="flex-[1.5]">
-                  <button
-                    onClick={() => onControlAction("togglePause", 0)}
-                    onMouseDown={(e) => e.preventDefault()}
-                    className="w-full py-2 bg-slate-700 hover:bg-slate-600 text-white rounded transition-all active:scale-95 border border-slate-600 flex justify-center items-center"
-                  >
-                    {isPlaying ? (
-                      <Pause size={18} fill="currentColor" />
-                    ) : (
-                      <Play
-                        size={18}
-                        fill="currentColor"
-                        className="translate-x-0.5"
-                      />
-                    )}
-                  </button>
-                </Tooltip>
-
-                <ControlButton
-                  label="+1f"
-                  onClick={() => onControlAction("frame", 1)}
-                  shortcut="."
-                />
-                <ControlButton
-                  label="+5f"
-                  onClick={() => onControlAction("frame", 5)}
-                />
-                <ControlButton
-                  label="+1s"
-                  onClick={() => onControlAction("seek", 1)}
-                />
-                <ControlButton
-                  label="+5s"
-                  onClick={() => onControlAction("seek", 5)}
-                  shortcut="→"
-                />
-                <ControlButton
-                  label="+10s"
-                  onClick={() => onControlAction("seek", 10)}
-                  shortcut="L"
-                />
-              </div>
-            </div>
-
             <div className="flex gap-2">
               <button
                 onClick={() => onMarkTime("start")}
