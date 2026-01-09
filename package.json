@@ -2,7 +2,7 @@
   "name": "yarn",
   "version": "0.1.0",
   "private": true,
-  "homepage": "https://github.com/KR0SS0/yarn/",
+  "homepage": "https://KR0SS0.github.io/yarn/",
   "dependencies": {
     "@testing-library/dom": "^10.4.1",
     "@testing-library/jest-dom": "^6.9.1",
