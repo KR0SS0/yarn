@@ -231,7 +231,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
               <div className="flex items-center gap-6">
                 <ToggleGroup
-                  label="1f before start"
+                  label="Start -1f"
                   checked={verifierSettings.checkBeforeStart}
                   onChange={(v) =>
                     setVerifierSettings({
@@ -241,7 +241,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
                   }
                 />
                 <ToggleGroup
-                  label="1f after start"
+                  label="Start +1f"
                   checked={verifierSettings.checkAfterStart}
                   onChange={(v) =>
                     setVerifierSettings({
@@ -252,7 +252,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
                 />
                 <div className="w-px h-4 bg-slate-700 mx-1" /> {/* Divider */}
                 <ToggleGroup
-                  label="1f before end"
+                  label="End -1f"
                   checked={verifierSettings.checkBeforeEnd}
                   onChange={(v) =>
                     setVerifierSettings({
@@ -262,7 +262,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
                   }
                 />
                 <ToggleGroup
-                  label="1f after end"
+                  label="End +1f"
                   checked={verifierSettings.checkAfterEnd}
                   onChange={(v) =>
                     setVerifierSettings({

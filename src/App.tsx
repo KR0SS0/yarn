@@ -51,19 +51,19 @@ const App = () => {
   const [currentSelectedIndex, setCurrentSelectedIndex] =
     usePersistentState<number>("yt_selected_index", 0);
 
+  const [verifierSettings, setVerifierSettings] =
+    usePersistentState<VerifierSettings>("yt_verifier_settings", {
+      checkBeforeStart: true,
+      checkAfterStart: false,
+      checkBeforeEnd: true,
+      checkAfterEnd: false,
+    });
+
   // Non-Persistent States
   const [mode, setMode] = useState<"runner" | "verifier">("runner");
   const [urlError, setUrlError] = useState("");
   const [showFpsHelp, setShowFpsHelp] = useState(false);
   const [isAutoLoadSelecting, setIsAutoLoadSelecting] = useState(true);
-
-  const [verifierSettings, setVerifierSettings] =
-    usePersistentState<VerifierSettings>("yt_verifier_settings", {
-      checkBeforeStart: true,
-      checkAfterStart: false,
-      checkBeforeEnd: false,
-      checkAfterEnd: true,
-    });
 
   const [activeOffsetLabel, setActiveOffsetLabel] = useState<string>("");
 
@@ -332,8 +332,8 @@ const App = () => {
       // Helper to generate a label for the checkpoint
       const getPointLabel = (offset: number, isStart: boolean) => {
         const type = isStart ? "Start" : "End";
-        if (offset === -1) return `1f Before ${type}`;
-        if (offset === 1) return `1f After ${type}`;
+        if (offset === -1) return `${type} -1f`;
+        if (offset === 1) return `${type} +1f`;
         return `Exact ${type}`;
       };
 
@@ -470,27 +470,27 @@ const App = () => {
           time: item.startTime,
           offset: -1,
           active: verifierSettings.checkBeforeStart,
-          label: "1f Before Start",
+          label: "Start -1f",
         },
         { time: item.startTime, offset: 0, active: true, label: "Exact Start" },
         {
           time: item.startTime,
           offset: 1,
           active: verifierSettings.checkAfterStart,
-          label: "1f After Start",
+          label: "Start +1f",
         },
         {
           time: item.endTime,
           offset: -1,
           active: verifierSettings.checkBeforeEnd,
-          label: "1f Before End",
+          label: "End -1f",
         },
         { time: item.endTime, offset: 0, active: true, label: "Exact End" },
         {
           time: item.endTime,
           offset: 1,
           active: verifierSettings.checkAfterEnd,
-          label: "1f After End",
+          label: "End +1f",
         },
       ].filter((p) => p.time !== null && p.active);
 
@@ -669,7 +669,7 @@ const App = () => {
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
   }, [fps, handleCycleVerifier]);
-  
+
   // YouTube Player Initialization Logic
   // Using useCallback so it can be used inside the Callback Ref
   const initializeYouTubePlayer = useCallback(
