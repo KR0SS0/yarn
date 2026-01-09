@@ -13,7 +13,7 @@ interface VideoPlayerProps {
   mode: "runner" | "verifier";
   currentItem: TimingItem | undefined;
   onMarkTime: (type: "start" | "end") => void;
-  onJumpToTime: (time: number, id: string) => void;
+  onJumpToTime: (time: number, id: string, label: string) => void;
   onControlAction: (
     type: "seek" | "frame" | "togglePause",
     value: number
@@ -101,7 +101,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
                 <button
                   disabled={currentItem.startTime === null}
                   onClick={() =>
-                    onJumpToTime(currentItem.startTime!, currentItem.id)
+                    onJumpToTime(currentItem.startTime!, currentItem.id, "exact start")
                   }
                   onMouseDown={(e) => e.preventDefault()}
                   className={`font-mono transition-colors ${
@@ -121,7 +121,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
                   disabled={currentItem.endTime === null}
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={() =>
-                    onJumpToTime(currentItem.endTime!, currentItem.id)
+                    onJumpToTime(currentItem.endTime!, currentItem.id, "exact end")
                   }
                   className={`font-mono transition-colors ${
                     currentItem.endTime !== null

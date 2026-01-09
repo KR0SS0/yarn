@@ -13,7 +13,7 @@ interface TimingListProps {
   mode: "runner" | "verifier";
   onAddLoad: () => void;
   onDeleteItem: (id: string) => void;
-  onJumpToTime: (time: number, id: string) => void;
+  onJumpToTime: (time: number, id: string, label?: string) => void;
   onSelectItem: (id: string) => void;
   overlappingLoadIndices: Set<number>;
   invalidDurationIndices: Set<number>;
@@ -162,13 +162,13 @@ useEffect(() => {
                   time={item.startTime}
                   fps={fps}
                   // In verifier mode, clicking the time jumps to the "0 offset" marker
-                  onClick={() => onJumpToTime(item.startTime!, item.id)}
+                  onClick={() => onJumpToTime(item.startTime!, item.id, "exact start")}
                 />
                 <TimeAction
                   label="End"
                   time={item.endTime}
                   fps={fps}
-                  onClick={() => onJumpToTime(item.endTime!, item.id)}
+                  onClick={() => onJumpToTime(item.endTime!, item.id, "exact end")}
                 />
                 <div className="flex flex-col">
                   <span className="text-slate-500 uppercase font-bold text-[9px]">

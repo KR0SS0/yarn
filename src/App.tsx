@@ -313,7 +313,7 @@ const App = () => {
     setLoads((prev) => prev.filter((l) => l.id.toString() !== id));
   };
 
-  const handleJumpToTime = (time: number, itemId: string) => {
+  const handleJumpToTime = (time: number, itemId: string, label?: string) => {
     // Video Actions
     if (ytPlayerRef.current) {
       ytPlayerRef.current.seekTo(time, true);
@@ -324,6 +324,12 @@ const App = () => {
     const itemIndex = timingItems.findIndex((item) => item.id === itemId);
     if (itemIndex !== -1) {
       setCurrentSelectedIndex(itemIndex);
+    }
+
+    if (label) {
+      setActiveOffsetLabel(label);
+    } else {
+      setActiveOffsetLabel("");
     }
   };
 
