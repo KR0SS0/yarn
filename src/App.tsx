@@ -669,7 +669,7 @@ const App = () => {
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
   }, [fps, handleCycleVerifier]);
-
+  
   // YouTube Player Initialization Logic
   // Using useCallback so it can be used inside the Callback Ref
   const initializeYouTubePlayer = useCallback(

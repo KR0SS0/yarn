@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { Trash2, Flag } from "lucide-react"; // Added CheckCircle for a "Verified" feel later
 import { TimingItem } from "../types";
 import { getItemValidationStatus } from "../utils/validation";
@@ -40,6 +40,18 @@ const TimingList: React.FC<TimingListProps> = ({
 }) => {
   const isVerifier = mode === "verifier";
 
+useEffect(() => {
+  if (currentIndex !== -1) {
+    const element = document.getElementById(`timing-item-${currentIndex}`);
+    if (element) {
+      element.scrollIntoView({
+        behavior: "smooth",
+        block: "nearest", // Only scrolls if the item is out of view
+      });
+    }
+  }
+}, [currentIndex, items.length]);
+
   return (
     <div className="bg-slate-800 rounded-lg shadow-2xl p-6 lg:col-span-1 border border-slate-700 flex flex-col h-[calc(100vh-14rem)]">
       <div className="flex justify-between items-center mb-4 shrink-0">
@@ -51,7 +63,7 @@ const TimingList: React.FC<TimingListProps> = ({
 
         {!isVerifier && (
           <div className="flex items-center gap-3">
-            <Tooltip text="Auto-add new Load markers when current is finished">
+            <Tooltip text="Auto-add new Load markers when last is finished">
               <div className="flex items-center gap-2 bg-slate-900/50 px-2 py-1 rounded-md border border-slate-700">
                 <span className="text-[10px] font-bold text-slate-500 uppercase tracking-tighter">
                   Auto
@@ -86,6 +98,7 @@ const TimingList: React.FC<TimingListProps> = ({
           return (
             <div
               key={item.id}
+              id={`timing-item-${index}`}
               onClick={() => onSelectItem(item.id)}
               className={`p-3 rounded-lg transition cursor-pointer border-2 mx-1 relative group ${
                 isSelected

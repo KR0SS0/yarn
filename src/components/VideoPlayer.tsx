@@ -80,7 +80,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4 text-sm">
             <span className="text-slate-300">
-              {isVerifier ? "Verifying" : "Editing"}{" "}
+              {isVerifier ? "Cycle Verifying" : "Editing"}{" "}
               <span className="font-semibold text-white">
                 {isRun
                   ? currentItem.label

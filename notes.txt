@@ -1,7 +1,7 @@
 Allow reordering loads
 Scroll list to bottom when new load is added.
 Add the normal playback options for verifier mode.
-Clarify auto tooltip to say last instead of current.
 Show average load time duration?
-Go to first point when selecting a load to verify.
 1f before end should be standard not after?
+Update the active label when user moves player freely (e.g. it shouldn't say Verifying: Load #1 (exact start))
+Update the active lable when user clicks one of the preset navigation buttons (e.g. Exact Start)
