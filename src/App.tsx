@@ -329,9 +329,6 @@ const App = () => {
 
   const handleCycleVerifier = useCallback(
     (direction: "next" | "prev") => {
-      const current = timingItems[currentSelectedIndex];
-      if (!current) return;
-
       // Helper to generate a label for the checkpoint
       const getPointLabel = (offset: number, isStart: boolean) => {
         const type = isStart ? "Start" : "End";
@@ -370,63 +367,58 @@ const App = () => {
           },
         ].filter((p) => p.time !== null && p.active);
 
-      const activePoints = getActivePoints(current);
-      if (activePoints.length === 0) return;
-
       const currentTime = ytPlayerRef.current?.getCurrentTime() || 0;
 
-      if (direction === "next") {
-        const targetPoint = activePoints.find(
-          (p) => p.time! + p.offset / fps > currentTime + 0.001
-        );
+      // Current item navigation
+      const currentItem = timingItems[currentSelectedIndex];
+      if (currentItem) {
+        const activePoints = getActivePoints(currentItem);
 
-        if (targetPoint) {
-          jumpToVerify(
-            targetPoint.time,
-            targetPoint.offset,
-            getPointLabel(targetPoint.offset, targetPoint.isStart)
+        if (direction === "next") {
+          const targetPoint = activePoints.find(
+            (p) => p.time! + p.offset / fps > currentTime + 0.001
           );
+          if (targetPoint) {
+            jumpToVerify(
+              targetPoint.time,
+              targetPoint.offset,
+              getPointLabel(targetPoint.offset, targetPoint.isStart)
+            );
+            return; // Exit early, we found a point in the current item
+          }
         } else {
-          const nextIndex = currentSelectedIndex + 1;
-          if (nextIndex < timingItems.length) {
-            setCurrentSelectedIndex(nextIndex);
-            const nextItemPoints = getActivePoints(timingItems[nextIndex]);
-            if (nextItemPoints.length > 0) {
-              const p = nextItemPoints[0];
-              jumpToVerify(
-                p.time,
-                p.offset,
-                getPointLabel(p.offset, p.isStart)
-              );
-            }
+          const targetPoint = [...activePoints]
+            .reverse()
+            .find((p) => p.time! + p.offset / fps < currentTime - 0.001);
+          if (targetPoint) {
+            jumpToVerify(
+              targetPoint.time,
+              targetPoint.offset,
+              getPointLabel(targetPoint.offset, targetPoint.isStart)
+            );
+            return; // Exit early
           }
         }
-      } else {
-        const targetPoint = [...activePoints]
-          .reverse()
-          .find((p) => p.time! + p.offset / fps < currentTime - 0.001);
+      }
 
-        if (targetPoint) {
-          jumpToVerify(
-            targetPoint.time,
-            targetPoint.offset,
-            getPointLabel(targetPoint.offset, targetPoint.isStart)
-          );
-        } else {
-          const prevIndex = currentSelectedIndex - 1;
-          if (prevIndex >= 0) {
-            setCurrentSelectedIndex(prevIndex);
-            const prevItemPoints = getActivePoints(timingItems[prevIndex]);
-            if (prevItemPoints.length > 0) {
-              const p = prevItemPoints[prevItemPoints.length - 1];
-              jumpToVerify(
-                p.time,
-                p.offset,
-                getPointLabel(p.offset, p.isStart)
-              );
-            }
-          }
+      // Cross item navigation (skipping empty items)
+      let nextIdx = currentSelectedIndex + (direction === "next" ? 1 : -1);
+
+      // Keep looking until we find an item with active points or hit the bounds
+      while (nextIdx >= 0 && nextIdx < timingItems.length) {
+        const nextItemPoints = getActivePoints(timingItems[nextIdx]);
+
+        if (nextItemPoints.length > 0) {
+          setCurrentSelectedIndex(nextIdx);
+          // If going next, grab first point. If going prev, grab last point.
+          const p =
+            direction === "next"
+              ? nextItemPoints[0]
+              : nextItemPoints[nextItemPoints.length - 1];
+          jumpToVerify(p.time, p.offset, getPointLabel(p.offset, p.isStart));
+          return;
         }
+        nextIdx += direction === "next" ? 1 : -1;
       }
     },
     [
@@ -473,38 +465,41 @@ const App = () => {
     const item = timingItems[itemIndex];
 
     if (mode === "verifier") {
-      // Define points for this specific item
       const activePoints = [
         {
           time: item.startTime,
           offset: -1,
           active: verifierSettings.checkBeforeStart,
+          label: "1f Before Start",
         },
-        { time: item.startTime, offset: 0, active: true },
+        { time: item.startTime, offset: 0, active: true, label: "Exact Start" },
         {
           time: item.startTime,
           offset: 1,
           active: verifierSettings.checkAfterStart,
+          label: "1f After Start",
         },
         {
           time: item.endTime,
           offset: -1,
           active: verifierSettings.checkBeforeEnd,
+          label: "1f Before End",
         },
-        { time: item.endTime, offset: 0, active: true },
+        { time: item.endTime, offset: 0, active: true, label: "Exact End" },
         {
           time: item.endTime,
           offset: 1,
           active: verifierSettings.checkAfterEnd,
+          label: "1f After End",
         },
       ].filter((p) => p.time !== null && p.active);
 
-      // Jump to the very first available checkpoint
       if (activePoints.length > 0) {
-        jumpToVerify(activePoints[0].time, activePoints[0].offset);
+        const firstPoint = activePoints[0];
+        jumpToVerify(firstPoint.time, firstPoint.offset, firstPoint.label);
       }
     } else {
-      // Normal runner mode behavior
+      // Runner mode
       if (item.startTime !== null) {
         ytPlayerRef.current?.seekTo(item.startTime, true);
       }

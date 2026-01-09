@@ -3,3 +3,5 @@ Scroll list to bottom when new load is added.
 Add the normal playback options for verifier mode.
 Clarify auto tooltip to say last instead of current.
 Show average load time duration?
+Go to first point when selecting a load to verify.
+1f before end should be standard not after?
