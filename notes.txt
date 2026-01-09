@@ -1,2 +1,5 @@
 Allow reordering loads
-
+Scroll list to bottom when new load is added.
+Add the normal playback options for verifier mode.
+Clarify auto tooltip to say last instead of current.
+Show average load time duration?

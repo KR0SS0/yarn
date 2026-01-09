@@ -393,7 +393,11 @@ const App = () => {
             const nextItemPoints = getActivePoints(timingItems[nextIndex]);
             if (nextItemPoints.length > 0) {
               const p = nextItemPoints[0];
-              jumpToVerify(p.time, p.offset, getPointLabel(p.offset, p.isStart));
+              jumpToVerify(
+                p.time,
+                p.offset,
+                getPointLabel(p.offset, p.isStart)
+              );
             }
           }
         }
@@ -415,7 +419,11 @@ const App = () => {
             const prevItemPoints = getActivePoints(timingItems[prevIndex]);
             if (prevItemPoints.length > 0) {
               const p = prevItemPoints[prevItemPoints.length - 1];
-              jumpToVerify(p.time, p.offset, getPointLabel(p.offset, p.isStart));
+              jumpToVerify(
+                p.time,
+                p.offset,
+                getPointLabel(p.offset, p.isStart)
+              );
             }
           }
         }
@@ -527,17 +535,21 @@ const App = () => {
   };
 
   const handleImport = (data: any) => {
-    if (data.videoId) {
-      setVideoUrl(`https://www.youtube.com/watch?v=${data.videoId}`);
-      setTimeout(handleLoadVideo, 100);
-    }
-    if (data.fps) setFps(data.fps);
-    if (data.runStart) setRunStart(data.runStart);
-    if (data.runEnd) setRunEnd(data.runEnd);
-    if (data.loads) {
-      setLoads(data.loads);
+    // Clear the videoId first to "blink" the component
+    setVideoId(null);
+
+    // Use a tiny timeout to let React process the "null" before setting the new one
+    setTimeout(() => {
+      if (data.videoId) {
+        setVideoUrl(`https://www.youtube.com/watch?v=${data.videoId}`);
+        setVideoId(data.videoId);
+      }
+      if (data.fps) setFps(data.fps);
+      if (data.runStart) setRunStart(data.runStart);
+      if (data.runEnd) setRunEnd(data.runEnd);
+      if (data.loads) setLoads(data.loads);
       setCurrentSelectedIndex(0);
-    }
+    }, 10);
   };
 
   const handleResetAll = () => {
@@ -748,6 +760,7 @@ const App = () => {
         {videoId && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <VideoPlayer
+              key={videoId}
               playerRef={playerRefCallback}
               mode={mode}
               currentItem={timingItems[currentSelectedIndex]}
