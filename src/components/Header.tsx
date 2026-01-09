@@ -1,6 +1,7 @@
 import React, { useRef } from "react";
 import { Download, Trash2, Upload } from "lucide-react";
 import Tooltip from "./ui/Tooltip";
+import Logo from "./ui/Logo";
 
 interface HeaderProps {
   mode: "runner" | "verifier";
@@ -44,9 +45,14 @@ const Header: React.FC<HeaderProps> = ({
 
   return (
     <div className="bg-slate-800 rounded-lg shadow-2xl p-6 mb-6">
-      <h1 className="text-3xl font-bold mb-2 bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
-        Yarn Load Timer
-      </h1>
+      <div className="flex items-center gap-3 mb-1">
+        <div className="w-8 h-8 text-blue-400 shrink-0">
+          <Logo className="w-9 h-9 shrink-0" />
+        </div>
+        <h1 className="text-3xl font-bold text-blue-400 leading-none tracking-tight">
+          Yarn
+        </h1>
+      </div>
       <p className="text-slate-400 mb-4">Speedrun load verification tool</p>
 
       <div className="flex items-center gap-4">
