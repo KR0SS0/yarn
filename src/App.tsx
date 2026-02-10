@@ -22,6 +22,7 @@ import { extractVideoId } from "./utils/youtube";
 import { secondsToFrames } from "./utils/timing";
 import { validateLoad } from "./utils/validation";
 import { usePersistentState } from "./hooks/usePersistanceState";
+import { saveRunToCloud, fetchRunFromCloud } from "./services/runService";
 
 const DEFAULT_TEST_VIDEO_ID = "IfFfdSRMpQs";
 
@@ -64,7 +65,7 @@ const App = () => {
   const [urlError, setUrlError] = useState("");
   const [showFpsHelp, setShowFpsHelp] = useState(false);
   const [isAutoLoadSelecting, setIsAutoLoadSelecting] = useState(true);
-
+  const [isSharing, setIsSharing] = useState(false);
   const [activeOffsetLabel, setActiveOffsetLabel] = useState<string>("");
 
   // ytPlayerRef stores the actual YouTube API instance
@@ -584,6 +585,52 @@ const App = () => {
     };
   }, []);
 
+  // Cloud
+  useEffect(() => {
+    const queryParams = new URLSearchParams(window.location.search);
+    const runId = queryParams.get("run");
+
+    if (runId) {
+      const loadCloudData = async () => {
+        try {
+          const data = await fetchRunFromCloud(runId);
+          handleImport(data);
+        } catch (err) {
+          console.error("Failed to load shared run:", err);
+        }
+      };
+      loadCloudData();
+    }
+  }, []);
+
+  const handleShare = async () => {
+    if (!canExport) return;
+
+    setIsSharing(true);
+    try {
+      const data = {
+        videoId,
+        fps,
+        runStart,
+        runEnd,
+        loads,
+        summary: { totalLoadFrames, rtaFrames, lrtFrames },
+      };
+
+      const id = await saveRunToCloud(data);
+      const shareUrl = `${window.location.origin}${window.location.pathname}?run=${id}`;
+
+      await navigator.clipboard.writeText(shareUrl);
+      alert(
+        "Link copied to clipboard! Anyone with this link can view your timing data.",
+      );
+    } catch (error) {
+      alert("Failed to generate share link. Please try again.");
+    } finally {
+      setIsSharing(false);
+    }
+  };
+
   // Inputs / Shortcuts
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
@@ -739,6 +786,8 @@ const App = () => {
           mode={mode}
           setMode={setMode}
           onDownload={handleExportToJson}
+          onShare={handleShare}
+          isSharing={isSharing}
           onImport={handleImport}
           canExport={canExport}
           onReset={handleResetAll}

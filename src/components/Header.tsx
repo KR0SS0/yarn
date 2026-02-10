@@ -1,5 +1,5 @@
 import React, { useRef } from "react";
-import { Download, Trash2, Upload } from "lucide-react";
+import { Download, Trash2, Upload, Share2, Loader2 } from "lucide-react";
 import Tooltip from "./ui/Tooltip";
 import Logo from "./ui/Logo";
 
@@ -7,6 +7,8 @@ interface HeaderProps {
   mode: "runner" | "verifier";
   setMode: (mode: "runner" | "verifier") => void;
   onDownload: () => void;
+  onShare: () => void;
+  isSharing: boolean;
   onImport: (json: any) => void;
   canExport: boolean;
   onReset: () => void;
@@ -16,6 +18,8 @@ const Header: React.FC<HeaderProps> = ({
   mode,
   setMode,
   onDownload,
+  onShare,
+  isSharing,
   onImport,
   canExport,
   onReset,
@@ -129,6 +133,33 @@ const Header: React.FC<HeaderProps> = ({
             </button>
           </Tooltip>
         </div>
+        <div className="relative group">
+          <Tooltip
+            text={
+              canExport
+                ? "Generate shareable cloud link"
+                : "Must have a run start and end marked"
+            }
+          >
+            <button
+              onClick={onShare}
+              disabled={!canExport || isSharing}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-semibold transition shadow-lg active:transform active:scale-95 ${
+                canExport
+                  ? "bg-blue-600 hover:bg-blue-700 text-white"
+                  : "bg-slate-700 text-slate-500 cursor-not-allowed opacity-50"
+              }`}
+            >
+              {isSharing ? (
+                <Loader2 size={18} className="animate-spin" />
+              ) : (
+                <Share2 size={18} />
+              )}
+              <span>{isSharing ? "Sharing..." : "Share Link"}</span>
+            </button>
+          </Tooltip>
+        </div>
+
         <button
           onClick={onReset}
           onMouseDown={(e) => e.preventDefault()}
