@@ -585,7 +585,7 @@ const App = () => {
     };
   }, []);
 
-  // Cloud
+  // Cloud - Load
   useEffect(() => {
     const queryParams = new URLSearchParams(window.location.search);
     const runId = queryParams.get("run");
@@ -595,6 +595,11 @@ const App = () => {
         try {
           const data = await fetchRunFromCloud(runId);
           handleImport(data);
+
+          // Clean the URL to avoid re-importing if the user refreshes
+          // We want the use the localStorage when refreshed not the url save
+          const newUrl = window.location.pathname;
+          window.history.replaceState({}, document.title, newUrl);
         } catch (err) {
           console.error("Failed to load shared run:", err);
         }
