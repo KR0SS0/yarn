@@ -24,6 +24,7 @@ export const useBackups = (
   const createBackup = useCallback((isManual: boolean = false) => {
     if (!currentData.videoId || (!isDirty && !isManual)) return;
 
+
     const validLoadsCount = currentData.loads.filter(
       (l: any) => l.startTime !== null || l.endTime !== null,
     ).length;

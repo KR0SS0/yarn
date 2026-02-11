@@ -11,6 +11,7 @@ interface VideoInputProps {
   showFpsHelp: boolean;
   setShowFpsHelp: (show: boolean) => void;
   onLoadVideo: () => void;
+  onReset: () => void;
 }
 
 const VideoInput: React.FC<VideoInputProps> = ({
@@ -24,9 +25,15 @@ const VideoInput: React.FC<VideoInputProps> = ({
   showFpsHelp,
   setShowFpsHelp,
   onLoadVideo,
+  onReset,
 }) => {
 
   if (mode === "verifier") return null;
+
+  const handleLoadClick = () => {
+    onReset();
+    onLoadVideo();
+  };
 
   return (
     <div className="bg-slate-800 rounded-lg shadow-2xl p-6 mb-6">
@@ -45,7 +52,7 @@ const VideoInput: React.FC<VideoInputProps> = ({
             }`}
           />
           <button
-            onClick={onLoadVideo}
+            onClick={handleLoadClick}
             onMouseDown={(e) => e.preventDefault()}
             className="px-6 py-2 bg-blue-600 rounded-lg hover:bg-blue-700 transition disabled:bg-slate-600 disabled:cursor-not-allowed"
           >

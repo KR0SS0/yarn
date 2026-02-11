@@ -497,17 +497,33 @@ const { backups, createBackup } = useBackups(currentSessionData, currentAuthor, 
   const handleResetAll = () => {
     if (
       window.confirm(
-        "Are you sure you want to clear all data? This cannot be undone."
+        "Are you sure you want to clear all data? A backup will be created, but backups do NOT last forever.",
       )
     ) {
-      setVideoUrl("");
-      setVideoId(null);
-      setRunStart({ time: null, offset: 0 });
-      setRunEnd({ time: null, offset: 0 });
-      setLoads([]);
-      setCurrentSelectedIndex(0);
+      performReset();
     }
   };
+
+  const performReset = useCallback(() => {
+    setVideoUrl("");
+    setVideoId(null);
+    setRunStart({ time: null, offset: 0 });
+    setRunEnd({ time: null, offset: 0 });
+    setLoads([]);
+    setCurrentSelectedIndex(0);
+    setIsDirty(false); 
+
+    if (isDirty) {
+      createBackup();
+    }
+  }, [
+    setVideoUrl,
+    setVideoId,
+    setRunStart,
+    setRunEnd,
+    setLoads,
+    setCurrentSelectedIndex,
+  ]);
 
   // --- Effects ---
   useEffect(() => {
@@ -613,6 +629,7 @@ const { backups, createBackup } = useBackups(currentSessionData, currentAuthor, 
           showFpsHelp={showFpsHelp}
           setShowFpsHelp={setShowFpsHelp}
           onLoadVideo={handleLoadVideo}
+          onReset={performReset}
         />
 
         <TimingSummary rtaFrames={rtaFrames} lrtFrames={lrtFrames} fps={fps} />
