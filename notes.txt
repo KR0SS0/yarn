@@ -7,3 +7,4 @@ Update the active label when user moves player freely (e.g. it shouldn't say Ver
 Update the active lable when user clicks one of the preset navigation buttons (e.g. Exact Start)
 
 Use youtube channel name as save fil name
+Adapt backup timestamp label to user's local time format

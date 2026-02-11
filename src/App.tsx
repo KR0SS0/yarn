@@ -14,6 +14,7 @@ import { saveRunToCloud, fetchRunFromCloud } from "./services/runService";
 import { useBackups } from "./hooks/useBackups";
 import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
 import { useValidation } from "./hooks/useValidation";
+import { useYouTubePlayer } from "./hooks/useYouTubePlayer";
 
 const DEFAULT_TEST_VIDEO_ID = "IfFfdSRMpQs";
 
@@ -52,9 +53,9 @@ const App = () => {
     adjustedRunEnd,
   } = useValidation({ loads, runStart, runEnd });
 
-  // ytPlayerRef stores the actual YouTube API instance
-  const ytPlayerRef = useRef<any>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
+  const { ytPlayerRef, isPlaying, playerRefCallback } = useYouTubePlayer({
+    videoId,
+  });
 
   const timingItems: TimingItem[] = useMemo(() => {
     return [
@@ -559,62 +560,6 @@ const App = () => {
       setIsSharing(false);
     }
   };
-
-  // YouTube Player Initialization Logic
-  // Using useCallback so it can be used inside the Callback Ref
-  const initializeYouTubePlayer = useCallback(
-    (element: HTMLDivElement) => {
-      const checkAPIAndBuild = () => {
-        if (!(window as any).YT || !(window as any).YT.Player) {
-          setTimeout(checkAPIAndBuild, 100);
-          return;
-        }
-
-        // Cleanup existing player to prevent memory leaks or double-renders
-        if (
-          ytPlayerRef.current &&
-          typeof ytPlayerRef.current.destroy === "function"
-        ) {
-          ytPlayerRef.current.destroy();
-        }
-
-        new (window as any).YT.Player(element, {
-          width: "100%",
-          height: "100%",
-          videoId,
-          playerVars: {
-            controls: 1,
-            rel: 0,
-            modestbranding: 1,
-          },
-          events: {
-            onReady: (event: any) => {
-              ytPlayerRef.current = event.target;
-            },
-            onStateChange: (event: any) => {
-              const playing =
-                event.data === (window as any).YT.PlayerState.PLAYING ||
-                event.data === (window as any).YT.PlayerState.BUFFERING;
-              setIsPlaying(playing);
-            },
-          },
-        });
-      };
-
-      checkAPIAndBuild();
-    },
-    [videoId]
-  );
-
-  // Callback Ref: This fires the moment the VideoPlayer's container div enters the DOM
-  const playerRefCallback = useCallback(
-    (node: HTMLDivElement | null) => {
-      if (node !== null && videoId) {
-        initializeYouTubePlayer(node);
-      }
-    },
-    [videoId, initializeYouTubePlayer]
-  );
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 text-white p-6">
