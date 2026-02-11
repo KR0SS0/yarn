@@ -1,6 +1,7 @@
 import React from "react";
 
 interface VideoInputProps {
+  mode: "runner" | "verifier";
   videoUrl: string;
   setVideoUrl: (url: string) => void;
   urlError: string;
@@ -13,6 +14,7 @@ interface VideoInputProps {
 }
 
 const VideoInput: React.FC<VideoInputProps> = ({
+  mode,
   videoUrl,
   setVideoUrl,
   urlError,
@@ -23,6 +25,9 @@ const VideoInput: React.FC<VideoInputProps> = ({
   setShowFpsHelp,
   onLoadVideo,
 }) => {
+
+  if (mode === "verifier") return null;
+
   return (
     <div className="bg-slate-800 rounded-lg shadow-2xl p-6 mb-6">
       <div className="mb-4">

@@ -603,6 +603,7 @@ const { backups, createBackup } = useBackups(currentSessionData, currentAuthor, 
           onReset={handleResetAll}
         />
         <VideoInput
+          mode={mode}
           videoUrl={videoUrl}
           setVideoUrl={setVideoUrl}
           urlError={urlError}
