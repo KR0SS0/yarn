@@ -5,7 +5,7 @@ export const useBackups = (
   author: string,
   isDirty: boolean,
   setisDirty: (val: boolean) => void,
-  intervalMs: number = 1000,
+  intervalMs: number = 30000 ,
 ) => {
   const [backups, setBackups] = useState<any[]>([]);
 
