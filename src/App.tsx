@@ -1,23 +1,11 @@
-import React, {
-  useState,
-  useRef,
-  useEffect,
-  useMemo,
-  useCallback,
-} from "react";
+import {useState, useRef, useEffect, useMemo, useCallback } from "react";
 import Header from "./components/Header";
 import VideoInput from "./components/VideoInput";
 import TimingSummary from "./components/TimingSummary";
 import VideoPlayer from "./components/VideoPlayer";
 import TimingList from "./components/TimingList";
 import ValidationWarnings from "./components/ValidationWarnings";
-import {
-  Load,
-  RunMarker,
-  ValidationWarning,
-  TimingItem,
-  VerifierSettings,
-} from "./types";
+import {Load, RunMarker, TimingItem, VerifierSettings} from "./types";
 import { extractVideoId } from "./utils/youtube";
 import { secondsToFrames } from "./utils/timing";
 import { validateLoad } from "./utils/validation";
@@ -25,34 +13,19 @@ import { usePersistentState } from "./hooks/usePersistanceState";
 import { saveRunToCloud, fetchRunFromCloud } from "./services/runService";
 import { useBackups } from "./hooks/useBackups";
 import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
+import { useValidation } from "./hooks/useValidation";
 
 const DEFAULT_TEST_VIDEO_ID = "IfFfdSRMpQs";
 
 const App = () => {
   // Persistent States
   const [fps, setFps] = usePersistentState<number>("yt_fps", 30);
-  const [runStart, setRunStart] = usePersistentState<RunMarker>(
-    "yt_run_start",
-    {
-      time: null,
-      offset: 0,
-    }
-  );
-  const [runEnd, setRunEnd] = usePersistentState<RunMarker>("yt_run_end", {
-    time: null,
-    offset: 0,
-  });
+  const [runStart, setRunStart] = usePersistentState<RunMarker>("yt_run_start", {time: null, offset: 0});
+  const [runEnd, setRunEnd] = usePersistentState<RunMarker>("yt_run_end", {time: null, offset: 0});
   const [loads, setLoads] = usePersistentState<Load[]>("yt_loads", []);
-  const [videoUrl, setVideoUrl] = usePersistentState<string>(
-    "yt_video_url",
-    ""
-  );
-  const [videoId, setVideoId] = usePersistentState<string | null>(
-    "yt_video_id",
-    null
-  );
-  const [currentSelectedIndex, setCurrentSelectedIndex] =
-    usePersistentState<number>("yt_selected_index", 0);
+  const [videoUrl, setVideoUrl] = usePersistentState<string>("yt_video_url","");
+  const [videoId, setVideoId] = usePersistentState<string | null>("yt_video_id", null);
+  const [currentSelectedIndex, setCurrentSelectedIndex] = usePersistentState<number>("yt_selected_index", 0);
 
   const [verifierSettings, setVerifierSettings] =
     usePersistentState<VerifierSettings>("yt_verifier_settings", {
@@ -69,6 +42,15 @@ const App = () => {
   const [isAutoLoadSelecting, setIsAutoLoadSelecting] = useState(true);
   const [isSharing, setIsSharing] = useState(false);
   const [activeOffsetLabel, setActiveOffsetLabel] = useState<string>("");
+
+  const {
+    overlappingIndices,
+    invalidDurationIndices,
+    outsideRunIndices,
+    warnings,
+    adjustedRunStart,
+    adjustedRunEnd,
+  } = useValidation({ loads, runStart, runEnd });
 
   // ytPlayerRef stores the actual YouTube API instance
   const ytPlayerRef = useRef<any>(null);
@@ -111,86 +93,6 @@ const App = () => {
   );
 
   const { backups, createBackup } = useBackups(currentSessionData);
-
-  // --- Validation Logic ---
-  const adjustedRunStart =
-    runStart.time !== null ? runStart.time + runStart.offset : null;
-  const adjustedRunEnd =
-    runEnd.time !== null ? runEnd.time + runEnd.offset : null;
-
-  const {
-    overlappingIndices,
-    invalidDurationIndices,
-    outsideRunIndices,
-    warnings,
-  } = useMemo(() => {
-    const overlapping = new Set<number>();
-    const invalidDuration = new Set<number>();
-    const outsideRun = new Set<number>();
-    const validationWarnings: ValidationWarning[] = [];
-
-    // Run Logic Validation
-    if (
-      adjustedRunStart !== null &&
-      adjustedRunEnd !== null &&
-      adjustedRunEnd <= adjustedRunStart
-    ) {
-      validationWarnings.push({
-        type: "error",
-        message: "Run duration must be greater than 0.",
-        affectedLoads: [],
-      });
-    }
-
-    // Load Logic Validation
-    loads.forEach((_, index) => {
-      const status = validateLoad(
-        loads[index].startTime,
-        loads[index].endTime,
-        loads,
-        index,
-        adjustedRunStart,
-        adjustedRunEnd
-      );
-
-      if (status.isOverlapping) overlapping.add(index);
-      if (status.isInvalidDuration) invalidDuration.add(index);
-      if (status.isOutsideRun) outsideRun.add(index);
-    });
-
-    // Generate Global Warning Messages for the Top Bar
-    if (overlapping.size > 0) {
-      validationWarnings.push({
-        type: "overlap",
-        message: `Loads ${Array.from(overlapping)
-          .map((i) => i + 1)
-          .join(", ")} have overlapping timeframes.`,
-        affectedLoads: Array.from(overlapping),
-      });
-    }
-    if (invalidDuration.size > 0) {
-      validationWarnings.push({
-        type: "invalid-duration",
-        message: "One or more loads have a negative or zero duration.",
-        affectedLoads: Array.from(invalidDuration),
-      });
-    }
-    if (outsideRun.size > 0) {
-      validationWarnings.push({
-        type: "outside-run",
-        message:
-          "One or more loads occur before the Run Start or after the Run End.",
-        affectedLoads: Array.from(outsideRun),
-      });
-    }
-
-    return {
-      overlappingIndices: overlapping,
-      invalidDurationIndices: invalidDuration,
-      outsideRunIndices: outsideRun,
-      warnings: validationWarnings,
-    };
-  }, [loads, adjustedRunStart, adjustedRunEnd]);
 
   // --- Frame Calculations ---
   const totalLoadFrames = useMemo(() => {
