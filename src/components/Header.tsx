@@ -1,5 +1,5 @@
 import React, { useRef } from "react";
-import { Download, Trash2, Upload, Share2, Loader2 } from "lucide-react";
+import { Download, Trash2, Upload, Share2, Loader2, History } from "lucide-react";
 import Tooltip from "./ui/Tooltip";
 import Logo from "./ui/Logo";
 
@@ -9,6 +9,8 @@ interface HeaderProps {
   onDownload: () => void;
   onShare: () => void;
   isSharing: boolean;
+  backups: any[];
+  onManualBackup: () => void;
   onImport: (json: any) => void;
   canExport: boolean;
   onReset: () => void;
@@ -20,6 +22,8 @@ const Header: React.FC<HeaderProps> = ({
   onDownload,
   onShare,
   isSharing,
+  backups,
+  onManualBackup,
   onImport,
   canExport,
   onReset,
@@ -46,6 +50,8 @@ const Header: React.FC<HeaderProps> = ({
     };
     reader.readAsText(file);
   };
+
+  const [showBackups, setShowBackups] = React.useState(false);
 
   return (
     <div className="bg-slate-800 rounded-lg shadow-2xl p-6 mb-6">
@@ -158,6 +164,50 @@ const Header: React.FC<HeaderProps> = ({
               <span>{isSharing ? "Sharing..." : "Share Link"}</span>
             </button>
           </Tooltip>
+        </div>
+        <div className="relative">
+          <Tooltip text="View auto-saved backups">
+            <button
+              onClick={() => setShowBackups(!showBackups)}
+              className="flex items-center gap-2 px-3 py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-lg transition-colors border border-slate-600"
+            >
+              <History size={18} />
+              <span className="hidden sm:inline">Backups</span>
+            </button>
+          </Tooltip>
+
+          {showBackups && (
+            <div className="absolute top-full mt-2 right-0 w-64 bg-slate-900 border border-slate-700 rounded-lg shadow-xl z-50 overflow-hidden">
+              <div className="p-2 text-xs font-bold text-slate-500 uppercase bg-slate-800/50">
+                Recent Backups (Auto-saved)
+              </div>
+              {backups.length === 0 ? (
+                <div className="p-4 text-sm text-slate-500 italic">
+                  No backups yet...
+                </div>
+              ) : (
+                <div className="max-h-60 overflow-y-auto">
+                  {backups.map((b) => (
+                    <button
+                      key={b.id}
+                      onClick={() => {
+                        onImport(b.data);
+                        setShowBackups(false);
+                      }}
+                      className="w-full text-left p-3 hover:bg-blue-600/20 border-b border-slate-800 last:border-0 transition-colors"
+                    >
+                      <div className="text-sm font-medium text-white">
+                        {b.timestamp}
+                      </div>
+                      <div className="text-xs text-slate-400">
+                        {b.data.loads.length} loads • {b.data.videoId}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         <button

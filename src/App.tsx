@@ -23,6 +23,7 @@ import { secondsToFrames } from "./utils/timing";
 import { validateLoad } from "./utils/validation";
 import { usePersistentState } from "./hooks/usePersistanceState";
 import { saveRunToCloud, fetchRunFromCloud } from "./services/runService";
+import { useBackups } from "./hooks/useBackups";
 
 const DEFAULT_TEST_VIDEO_ID = "IfFfdSRMpQs";
 
@@ -95,6 +96,20 @@ const App = () => {
   }, [loads, runStart, runEnd]);
 
   const canExport = runStart.time !== null && runEnd.time !== null;
+
+  const currentSessionData = useMemo(
+    () => ({
+      videoId,
+      fps,
+      runStart,
+      runEnd,
+      loads,
+      verifierSettings,
+    }),
+    [videoId, fps, runStart, runEnd, loads, verifierSettings],
+  );
+
+  const { backups, createBackup } = useBackups(currentSessionData);
 
   // --- Validation Logic ---
   const adjustedRunStart =
@@ -793,6 +808,8 @@ const App = () => {
           onDownload={handleExportToJson}
           onShare={handleShare}
           isSharing={isSharing}
+          backups={backups}
+          onManualBackup={createBackup}
           onImport={handleImport}
           canExport={canExport}
           onReset={handleResetAll}
