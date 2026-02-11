@@ -43,6 +43,7 @@ const App = () => {
   const [isAutoLoadSelecting, setIsAutoLoadSelecting] = useState(true);
   const [isSharing, setIsSharing] = useState(false);
   const [activeOffsetLabel, setActiveOffsetLabel] = useState<string>("");
+  const [isDirty, setIsDirty] = useState(false);
 
   const {
     overlappingIndices,
@@ -95,7 +96,7 @@ const App = () => {
     [videoId, fps, runStart, runEnd, loads, verifierSettings],
   );
 
-const { backups, createBackup } = useBackups(currentSessionData, currentAuthor);
+const { backups, createBackup } = useBackups(currentSessionData, currentAuthor, isDirty, setIsDirty);
 
   // --- Frame Calculations ---
   const totalLoadFrames = useMemo(() => {
@@ -211,12 +212,14 @@ const { backups, createBackup } = useBackups(currentSessionData, currentAuthor);
         if (!hasError) handleAddLoad();
       }
     }
+    setIsDirty(true);
   };
 
   const handleAddLoad = () => {
     const newLoad: Load = { id: Date.now(), startTime: null, endTime: null };
     setLoads((prev) => [...prev, newLoad]);
     setCurrentSelectedIndex(loads.length + 1);
+    setIsDirty(true);
   };
 
   const handleDeleteItem = (id: string) => {
@@ -233,6 +236,7 @@ const { backups, createBackup } = useBackups(currentSessionData, currentAuthor);
     }
 
     setLoads((prev) => prev.filter((l) => l.id.toString() !== id));
+    setIsDirty(true);
   };
 
   const handleJumpToTime = (time: number, itemId: string, label?: string) => {
@@ -578,6 +582,11 @@ const { backups, createBackup } = useBackups(currentSessionData, currentAuthor);
     }
   };
 
+  const handleFpsChange = (newFps: number) => {
+    setFps(newFps);
+    setIsDirty(true);
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 text-white p-6">
       <div className="max-w-7xl mx-auto">
@@ -599,7 +608,7 @@ const { backups, createBackup } = useBackups(currentSessionData, currentAuthor);
           urlError={urlError}
           setUrlError={setUrlError}
           fps={fps}
-          setFps={setFps}
+          setFps={handleFpsChange}
           showFpsHelp={showFpsHelp}
           setShowFpsHelp={setShowFpsHelp}
           onLoadVideo={handleLoadVideo}
