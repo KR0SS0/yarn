@@ -5,7 +5,7 @@ export const useBackups = (
   author: string,
   isDirty: boolean,
   setisDirty: (val: boolean) => void,
-  intervalMs: number = 100000,
+  intervalMs: number = 1000,
 ) => {
   const [backups, setBackups] = useState<any[]>([]);
 
@@ -21,9 +21,9 @@ export const useBackups = (
     }
   }, []);
 
-  const createBackup = useCallback((isManual: boolean = false) => {
-    if (!currentData.videoId || (!isDirty && !isManual)) return;
-
+  const createBackup = useCallback(() => {
+    // If no video is loaded OR nothing has changed, do nothing.
+    if (!currentData.videoId || !isDirty) return;
 
     const validLoadsCount = currentData.loads.filter(
       (l: any) => l.startTime !== null || l.endTime !== null,
@@ -44,15 +44,16 @@ export const useBackups = (
       return updated;
     });
 
+    // Successfully saved, so it's no longer "dirty"
     setisDirty(false);
+    console.log("Session backed up successfully.");
+  }, [currentData, author, isDirty, setisDirty]);
 
-    if (!isManual) console.log("Autosave triggered: Data was dirty.");
-  }, [currentData, author, isDirty, setisDirty]); // Depend on author string
-
+  // Handle the interval
   useEffect(() => {
     const timer = setInterval(createBackup, intervalMs);
     return () => clearInterval(timer);
   }, [createBackup, intervalMs]);
 
-  return { backups, createBackup: () => createBackup(true) };
+  return { backups, createBackup };
 };
