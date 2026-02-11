@@ -24,6 +24,7 @@ import { validateLoad } from "./utils/validation";
 import { usePersistentState } from "./hooks/usePersistanceState";
 import { saveRunToCloud, fetchRunFromCloud } from "./services/runService";
 import { useBackups } from "./hooks/useBackups";
+import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
 
 const DEFAULT_TEST_VIDEO_ID = "IfFfdSRMpQs";
 
@@ -623,6 +624,12 @@ const App = () => {
     }
   }, []);
 
+  useKeyboardShortcuts({
+    ytPlayerRef,
+    fps,
+    onCycleVerifier: handleCycleVerifier,
+  });
+
   const handleShare = async () => {
     if (!canExport) return;
 
@@ -650,98 +657,6 @@ const App = () => {
       setIsSharing(false);
     }
   };
-
-  // Inputs / Shortcuts
-  useEffect(() => {
-    const handleKey = (e: KeyboardEvent) => {
-      // Don't trigger shortcuts if typing in an input
-      const active = document.activeElement;
-      if (active?.tagName === "INPUT" || active?.tagName === "TEXTAREA") return;
-      if (
-        !ytPlayerRef.current ||
-        typeof ytPlayerRef.current.getCurrentTime !== "function"
-      )
-        return;
-
-      const player = ytPlayerRef.current;
-      const currentTime = player.getCurrentTime();
-
-      switch (e.key.toLowerCase()) {
-        case " ": // Spacebar
-        case "k":
-          e.preventDefault();
-          player.getPlayerState() === 1
-            ? player.pauseVideo()
-            : player.playVideo();
-          break;
-
-        // Arrow Keys (Standard 5s)
-        case "arrowleft":
-          e.preventDefault();
-          player.seekTo(currentTime - 5, true);
-          break;
-        case "arrowright":
-          e.preventDefault();
-          player.seekTo(currentTime + 5, true);
-          break;
-
-        // J, L (Standard YouTube skips)
-        case "j": // Back 10s
-          e.preventDefault();
-          player.seekTo(currentTime - 10, true);
-          break;
-        case "l": // Forward 10s
-          e.preventDefault();
-          player.seekTo(currentTime + 10, true);
-          break;
-
-        // Frame Stepping
-        case ",":
-          player.pauseVideo();
-          player.seekTo(currentTime - 1 / fps, true);
-          break;
-        case ".":
-          player.pauseVideo();
-          player.seekTo(currentTime + 1 / fps, true);
-          break;
-
-        // Mute / Unmute
-        case "m":
-          if (player.isMuted()) {
-            player.unMute();
-          } else {
-            player.mute();
-          }
-          break;
-
-        // Fullscreen
-        case "f":
-          const iframe = player.getIframe();
-          if (iframe) {
-            if (document.fullscreenElement) {
-              document.exitFullscreen();
-            } else {
-              iframe.requestFullscreen?.() ||
-                iframe.mozRequestFullScreen?.() ||
-                iframe.webkitRequestFullscreen?.() ||
-                iframe.msRequestFullscreen?.();
-            }
-          }
-          break;
-        case "z":
-          e.preventDefault();
-          handleCycleVerifier("prev");
-          break;
-        case "x":
-          e.preventDefault();
-          handleCycleVerifier("next");
-          break;
-      }
-    };
-
-    window.addEventListener("keydown", handleKey);
-    return () => window.removeEventListener("keydown", handleKey);
-  }, [fps, handleCycleVerifier]);
 
   // YouTube Player Initialization Logic
   // Using useCallback so it can be used inside the Callback Ref
