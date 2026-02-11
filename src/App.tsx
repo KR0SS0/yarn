@@ -53,9 +53,11 @@ const App = () => {
     adjustedRunEnd,
   } = useValidation({ loads, runStart, runEnd });
 
-  const { ytPlayerRef, isPlaying, playerRefCallback } = useYouTubePlayer({
-    videoId,
+  const { ytPlayerRef, isPlaying, playerRefCallback, videoData } = useYouTubePlayer({
+      videoId,
   });
+  
+  const currentAuthor = videoData?.author || "unknown";
 
   const timingItems: TimingItem[] = useMemo(() => {
     return [
@@ -93,7 +95,7 @@ const App = () => {
     [videoId, fps, runStart, runEnd, loads, verifierSettings],
   );
 
-  const { backups, createBackup } = useBackups(currentSessionData);
+const { backups, createBackup } = useBackups(currentSessionData, currentAuthor);
 
   // --- Frame Calculations ---
   const totalLoadFrames = useMemo(() => {
@@ -433,14 +435,29 @@ const App = () => {
   };
 
   const handleExportToJson = () => {
+    // Get non-empty loads
+    const validLoads = loads.filter(
+      (l) => l.startTime !== null || l.endTime !== null,
+    );
+    const loadCount = validLoads.length;
+
+    // Get Channel Name (fallback to "Unknown" if not loaded)
+    const channelName =
+      (ytPlayerRef.current as any)
+        ?.getVideoData()
+        ?.author?.replace(/\s+/g, "-") || "unknown";
+
+    // Construct Filename
+    const fileName = `yarn-[${channelName}]-${videoId}-${loadCount}loads.json`;
+
     const data = {
       videoId,
+      channelName,
       fps,
       runStart,
       runEnd,
-      loads,
+      loads: validLoads,
       exportedAt: new Date().toISOString(),
-      summary: { totalLoadFrames, rtaFrames, lrtFrames },
     };
     const blob = new Blob([JSON.stringify(data, null, 2)], {
       type: "application/json",
@@ -448,12 +465,12 @@ const App = () => {
     const href = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = href;
-    link.download = `timing-${videoId}.json`;
+    link.download = fileName;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(href);
-  };
+  };;
 
   const handleImport = (data: any) => {
     // Clear the videoId first to "blink" the component

@@ -1,36 +1,43 @@
 import { useEffect, useState, useCallback } from "react";
 
-export const useBackups = (currentData: any, intervalMs: number = 200000) => {
+export const useBackups = (
+  currentData: any,
+  author: string, 
+  intervalMs: number = 200000,
+) => {
   const [backups, setBackups] = useState<any[]>([]);
 
   // Load existing backups on mount
   useEffect(() => {
     const saved = localStorage.getItem("yarn_backups");
-    if (saved) setBackups(JSON.parse(saved));
+    if (saved) {
+      try { setBackups(JSON.parse(saved)); } catch (e) { console.error(e); }
+    }
   }, []);
 
   const createBackup = useCallback(() => {
-    // Validation: Don't backup if no video is loaded or no data exists
     if (!currentData.videoId) return;
+
+    const validLoadsCount = currentData.loads.filter(
+      (l: any) => l.startTime !== null || l.endTime !== null,
+    ).length;
+
+    const labelName = `${author}, ${currentData.videoId}, ${validLoadsCount} loads`;
 
     const newBackup = {
       id: Date.now(),
+      label: labelName,
       timestamp: new Date().toLocaleString(),
       data: { ...currentData },
     };
 
-    const savedBackupsAmount = 10;
-
     setBackups((prev) => {
-      const updated = [newBackup, ...prev].slice(0, savedBackupsAmount);
+      const updated = [newBackup, ...prev].slice(0, 10);
       localStorage.setItem("yarn_backups", JSON.stringify(updated));
       return updated;
     });
-    
-    console.log("Autosave: Backup created at", newBackup.timestamp);
-  }, [currentData]);
+  }, [currentData, author]); // Depend on author string
 
-  // The Timer
   useEffect(() => {
     const timer = setInterval(createBackup, intervalMs);
     return () => clearInterval(timer);

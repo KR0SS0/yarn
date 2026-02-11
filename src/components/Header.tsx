@@ -161,7 +161,7 @@ const Header: React.FC<HeaderProps> = ({
               ) : (
                 <Share2 size={18} />
               )}
-              <span>{isSharing ? "Sharing..." : "Share Link"}</span>
+              <span>{isSharing ? "Exporting..." : "Export as Link"}</span>
             </button>
           </Tooltip>
         </div>
@@ -200,7 +200,7 @@ const Header: React.FC<HeaderProps> = ({
                         {b.timestamp}
                       </div>
                       <div className="text-xs text-slate-400">
-                        {b.data.loads.length} loads • {b.data.videoId}
+                        {b.label}
                       </div>
                     </button>
                   ))}
