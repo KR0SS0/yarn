@@ -4,12 +4,14 @@ interface ShortcutProps {
   ytPlayerRef: React.RefObject<any>;
   fps: number;
   onCycleVerifier: (direction: "next" | "prev") => void;
+  onControlAction: (type: "seek" | "frame" | "togglePause", value: number) => void;
 }
 
 export const useKeyboardShortcuts = ({
   ytPlayerRef,
   fps,
   onCycleVerifier,
+  onControlAction,
 }: ShortcutProps) => {
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
@@ -20,50 +22,67 @@ export const useKeyboardShortcuts = ({
       const player = ytPlayerRef.current;
       if (!player || typeof player.getCurrentTime !== "function") return;
 
-      const currentTime = player.getCurrentTime();
+      const key = e.key.toLowerCase();
 
-      switch (e.key.toLowerCase()) {
-        case " ": // Spacebar
+      switch (key) {
+        // --- Playback Controls ---
+        case " ":
         case "k":
           e.preventDefault();
-          player.getPlayerState() === 1 ? player.pauseVideo() : player.playVideo();
+          onControlAction("togglePause", 0);
           break;
 
+        case "m":
+          player.isMuted() ? player.unMute() : player.mute();
+          break;
+
+        // --- Standard Seeking (5s) ---
         case "arrowleft":
           e.preventDefault();
-          player.seekTo(currentTime - 5, true);
+          onControlAction("seek", -5);
           break;
 
         case "arrowright":
           e.preventDefault();
-          player.seekTo(currentTime + 5, true);
+          onControlAction("seek", 5);
           break;
 
-        case "j": // Back 10s
+        // --- Large Seeking (10s) ---
+        case "j":
           e.preventDefault();
-          player.seekTo(currentTime - 10, true);
+          onControlAction("seek", -10);
           break;
 
-        case "l": // Forward 10s
+        case "l":
           e.preventDefault();
-          player.seekTo(currentTime + 10, true);
+          onControlAction("seek", 10);
           break;
 
-        case ",": // Frame Back
-          player.pauseVideo();
-          player.seekTo(currentTime - 1 / fps, true);
+        // --- Precision Frame Stepping ---
+        case ",":
+          e.preventDefault();
+          onControlAction("frame", -1);
           break;
 
-        case ".": // Frame Forward
-          player.pauseVideo();
-          player.seekTo(currentTime + 1 / fps, true);
+        case ".":
+          e.preventDefault();
+          onControlAction("frame", 1);
           break;
 
-        case "m": // Mute toggle
-          player.isMuted() ? player.unMute() : player.mute();
+        // --- Verification Cycling ---
+        case "z":
+          e.preventDefault();
+          onCycleVerifier("prev");
           break;
 
-        case "f": // Fullscreen
+        case "x":
+          e.preventDefault();
+          onCycleVerifier("next");
+          break;
+
+        // --- Fullscreen Utility ---
+        case "f":
+          e.preventDefault();
           const iframe = player.getIframe();
           if (iframe) {
             if (document.fullscreenElement) {
@@ -75,16 +94,6 @@ export const useKeyboardShortcuts = ({
                 (iframe as any).msRequestFullscreen?.();
             }
           }
-          break;
-
-        case "z":
-          e.preventDefault();
-          onCycleVerifier("prev");
-          break;
-
-        case "x":
-          e.preventDefault();
-          onCycleVerifier("next");
           break;
       }
     };

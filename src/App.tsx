@@ -7,7 +7,7 @@ import TimingList from "./components/TimingList";
 import ValidationWarnings from "./components/ValidationWarnings";
 import {Load, RunMarker, TimingItem, VerifierSettings} from "./types";
 import { extractVideoId } from "./utils/youtube";
-import { secondsToFrames } from "./utils/timing";
+import { getActiveLabel, secondsToFrames } from "./utils/timing";
 import { validateLoad } from "./utils/validation";
 import { usePersistentState } from "./hooks/usePersistanceState";
 import { saveRunToCloud, fetchRunFromCloud } from "./services/runService";
@@ -21,13 +21,25 @@ const DEFAULT_TEST_VIDEO_ID = "IfFfdSRMpQs";
 const App = () => {
   // Persistent States
   const [fps, setFps] = usePersistentState<number>("yt_fps", 30);
-  const [runStart, setRunStart] = usePersistentState<RunMarker>("yt_run_start", {time: null, offset: 0});
-  const [runEnd, setRunEnd] = usePersistentState<RunMarker>("yt_run_end", {time: null, offset: 0});
+  const [runStart, setRunStart] = usePersistentState<RunMarker>(
+    "yt_run_start",
+    { time: null, offset: 0 },
+  );
+  const [runEnd, setRunEnd] = usePersistentState<RunMarker>("yt_run_end", {
+    time: null,
+    offset: 0,
+  });
   const [loads, setLoads] = usePersistentState<Load[]>("yt_loads", []);
-  const [videoUrl, setVideoUrl] = usePersistentState<string>("yt_video_url","");
-  const [videoId, setVideoId] = usePersistentState<string | null>("yt_video_id", null);
-  const [currentSelectedIndex, setCurrentSelectedIndex] = usePersistentState<number>("yt_selected_index", 0);
-
+  const [videoUrl, setVideoUrl] = usePersistentState<string>(
+    "yt_video_url",
+    "",
+  );
+  const [videoId, setVideoId] = usePersistentState<string | null>(
+    "yt_video_id",
+    null,
+  );
+  const [currentSelectedIndex, setCurrentSelectedIndex] =
+    usePersistentState<number>("yt_selected_index", 0);
   const [verifierSettings, setVerifierSettings] =
     usePersistentState<VerifierSettings>("yt_verifier_settings", {
       checkBeforeStart: true,
@@ -54,10 +66,11 @@ const App = () => {
     adjustedRunEnd,
   } = useValidation({ loads, runStart, runEnd });
 
-  const { ytPlayerRef, isPlaying, playerRefCallback, videoData } = useYouTubePlayer({
+  const { ytPlayerRef, isPlaying, playerRefCallback, videoData } =
+    useYouTubePlayer({
       videoId,
-  });
-  
+    });
+
   const currentAuthor = videoData?.author || "unknown";
 
   const timingItems: TimingItem[] = useMemo(() => {
@@ -96,7 +109,12 @@ const App = () => {
     [videoId, fps, runStart, runEnd, loads, verifierSettings],
   );
 
-const { backups, createBackup } = useBackups(currentSessionData, currentAuthor, isDirty, setIsDirty);
+  const { backups, createBackup } = useBackups(
+    currentSessionData,
+    currentAuthor,
+    isDirty,
+    setIsDirty,
+  );
 
   // --- Frame Calculations ---
   const totalLoadFrames = useMemo(() => {
@@ -122,18 +140,15 @@ const { backups, createBackup } = useBackups(currentSessionData, currentAuthor, 
       : null;
   const lrtFrames = rtaFrames !== null ? rtaFrames - totalLoadFrames : null;
 
-  // Logic to jump to specific verification points
-  const jumpToVerify = useCallback(
-    (time: number | null, frameOffset: number, label?: string) => {
-      if (time === null || !ytPlayerRef.current) return;
-      const targetTime = time + frameOffset / fps;
-      ytPlayerRef.current.seekTo(targetTime, true);
-      ytPlayerRef.current.pauseVideo();
-
-      // Set the label so the UI knows what we are looking at
-      if (label) setActiveOffsetLabel(label);
+  const updateLabelAutomatically = useCallback(
+    (time: number) => {
+      const currentItem = timingItems[currentSelectedIndex];
+      if (currentItem) {
+        const label = getActiveLabel(time, currentItem, fps);
+        setActiveOffsetLabel(label);
+      }
     },
-    [fps]
+    [timingItems, currentSelectedIndex, fps],
   );
 
   // --- Handlers ---
@@ -185,8 +200,8 @@ const { backups, createBackup } = useBackups(currentSessionData, currentAuthor, 
         prev.map((load, idx) =>
           idx === currentItem.loadIndex
             ? { ...load, [type === "start" ? "startTime" : "endTime"]: time }
-            : load
-        )
+            : load,
+        ),
       );
     }
 
@@ -207,7 +222,7 @@ const { backups, createBackup } = useBackups(currentSessionData, currentAuthor, 
           loads,
           currentItem.loadIndex ?? -1,
           adjustedRunStart,
-          adjustedRunEnd
+          adjustedRunEnd,
         );
         if (!hasError) handleAddLoad();
       }
@@ -239,7 +254,7 @@ const { backups, createBackup } = useBackups(currentSessionData, currentAuthor, 
     setIsDirty(true);
   };
 
-  const handleJumpToTime = (time: number, itemId: string, label?: string) => {
+  const handleJumpToTime = (time: number, itemId: string) => {
     // Video Actions
     if (ytPlayerRef.current) {
       ytPlayerRef.current.seekTo(time, true);
@@ -250,14 +265,28 @@ const { backups, createBackup } = useBackups(currentSessionData, currentAuthor, 
     const itemIndex = timingItems.findIndex((item) => item.id === itemId);
     if (itemIndex !== -1) {
       setCurrentSelectedIndex(itemIndex);
-    }
-
-    if (label) {
+      const label = getActiveLabel(time, timingItems[itemIndex], fps);
       setActiveOffsetLabel(label);
-    } else {
-      setActiveOffsetLabel("");
     }
   };
+
+  // Logic to jump to specific verification points
+  const handleJumpToVerify = useCallback(
+    (time: number | null, frameOffset: number, label?: string) => {
+      if (time === null || !ytPlayerRef.current) return;
+
+      const targetTime = time + frameOffset / fps;
+      ytPlayerRef.current.seekTo(targetTime, true);
+      ytPlayerRef.current.pauseVideo();
+
+      if (label) {
+        setActiveOffsetLabel(label);
+      } else {
+        updateLabelAutomatically(targetTime);
+      }
+    },
+    [fps, updateLabelAutomatically],
+  );
 
   const handleCycleVerifier = useCallback(
     (direction: "next" | "prev") => {
@@ -308,13 +337,13 @@ const { backups, createBackup } = useBackups(currentSessionData, currentAuthor, 
 
         if (direction === "next") {
           const targetPoint = activePoints.find(
-            (p) => p.time! + p.offset / fps > currentTime + 0.001
+            (p) => p.time! + p.offset / fps > currentTime + 0.001,
           );
           if (targetPoint) {
-            jumpToVerify(
+            handleJumpToVerify(
               targetPoint.time,
               targetPoint.offset,
-              getPointLabel(targetPoint.offset, targetPoint.isStart)
+              getPointLabel(targetPoint.offset, targetPoint.isStart),
             );
             return; // Exit early, we found a point in the current item
           }
@@ -323,10 +352,10 @@ const { backups, createBackup } = useBackups(currentSessionData, currentAuthor, 
             .reverse()
             .find((p) => p.time! + p.offset / fps < currentTime - 0.001);
           if (targetPoint) {
-            jumpToVerify(
+            handleJumpToVerify(
               targetPoint.time,
               targetPoint.offset,
-              getPointLabel(targetPoint.offset, targetPoint.isStart)
+              getPointLabel(targetPoint.offset, targetPoint.isStart),
             );
             return; // Exit early
           }
@@ -347,7 +376,11 @@ const { backups, createBackup } = useBackups(currentSessionData, currentAuthor, 
             direction === "next"
               ? nextItemPoints[0]
               : nextItemPoints[nextItemPoints.length - 1];
-          jumpToVerify(p.time, p.offset, getPointLabel(p.offset, p.isStart));
+          handleJumpToVerify(
+            p.time,
+            p.offset,
+            getPointLabel(p.offset, p.isStart),
+          );
           return;
         }
         nextIdx += direction === "next" ? 1 : -1;
@@ -359,34 +392,38 @@ const { backups, createBackup } = useBackups(currentSessionData, currentAuthor, 
       verifierSettings,
       fps,
       setCurrentSelectedIndex,
-      jumpToVerify,
-    ]
+      handleJumpToVerify,
+    ],
   );
 
   const handleControlAction = (
     type: "seek" | "frame" | "togglePause",
-    value: number
+    value: number,
   ) => {
     if (!ytPlayerRef.current) return;
 
-    const currentTime = ytPlayerRef.current.getCurrentTime();
+    const player = ytPlayerRef.current;
+    const currentTime = player.getCurrentTime();
+    let newTime = currentTime;
 
     switch (type) {
       case "seek":
-        ytPlayerRef.current.seekTo(currentTime + value, true);
+        newTime = currentTime + value;
+        player.seekTo(newTime, true);
         break;
       case "frame":
-        // Move by (1 / fps) * number of frames
-        ytPlayerRef.current.pauseVideo();
-        ytPlayerRef.current.seekTo(currentTime + value / fps, true);
+        player.pauseVideo();
+        newTime = currentTime + value / fps;
+        player.seekTo(newTime, true);
         break;
       case "togglePause":
-        const state = ytPlayerRef.current.getPlayerState();
-        if (state === 1)
-          ytPlayerRef.current.pauseVideo(); // 1 is playing
-        else ytPlayerRef.current.playVideo();
-        break;
+        const state = player.getPlayerState();
+        state === 1 ? player.pauseVideo() : player.playVideo();
+        return;
     }
+
+    // Automating the label update after the move
+    updateLabelAutomatically(newTime);
   };
 
   const handleSelectAndVerify = (id: string) => {
@@ -428,7 +465,11 @@ const { backups, createBackup } = useBackups(currentSessionData, currentAuthor, 
 
       if (activePoints.length > 0) {
         const firstPoint = activePoints[0];
-        jumpToVerify(firstPoint.time, firstPoint.offset, firstPoint.label);
+        handleJumpToVerify(
+          firstPoint.time,
+          firstPoint.offset,
+          firstPoint.label,
+        );
       }
     } else {
       // Runner mode
@@ -474,7 +515,7 @@ const { backups, createBackup } = useBackups(currentSessionData, currentAuthor, 
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(href);
-  };;
+  };
 
   const handleImport = (data: any) => {
     // Clear the videoId first to "blink" the component
@@ -511,7 +552,7 @@ const { backups, createBackup } = useBackups(currentSessionData, currentAuthor, 
     setRunEnd({ time: null, offset: 0 });
     setLoads([]);
     setCurrentSelectedIndex(0);
-    setIsDirty(false); 
+    setIsDirty(false);
 
     if (isDirty) {
       createBackup();
@@ -568,6 +609,7 @@ const { backups, createBackup } = useBackups(currentSessionData, currentAuthor, 
     ytPlayerRef,
     fps,
     onCycleVerifier: handleCycleVerifier,
+    onControlAction: handleControlAction,
   });
 
   const handleShare = async () => {
@@ -652,7 +694,7 @@ const { backups, createBackup } = useBackups(currentSessionData, currentAuthor, 
               isPlaying={isPlaying}
               verifierSettings={verifierSettings}
               setVerifierSettings={setVerifierSettings}
-              jumpToVerify={jumpToVerify}
+              onJumpToVerify={handleJumpToVerify}
               onCycle={handleCycleVerifier}
               activeOffsetLabel={activeOffsetLabel}
             />
@@ -679,6 +721,6 @@ const { backups, createBackup } = useBackups(currentSessionData, currentAuthor, 
       </div>
     </div>
   );
-};
+};;
 
 export default App;

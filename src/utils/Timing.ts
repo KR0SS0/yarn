@@ -1,3 +1,5 @@
+import { TimingItem } from "../types";
+
 /*
  * Convert seconds to frames using a fixed FPS.
  * Rounds to the nearest frame.
@@ -12,14 +14,14 @@ export const secondsToFrames = (seconds: number, fps: number): number => {
  * Example: 00:01:05.200 -> 01:05.200
  */
 export const formatSmartTime = (timeStr: string): string => {
-  const parts = timeStr.split(':');
-  if (parts[0] === '00') {
+  const parts = timeStr.split(":");
+  if (parts[0] === "00") {
     parts.shift();
-    if (parts[0] === '00') {
+    if (parts[0] === "00") {
       parts.shift();
     }
   }
-  return parts.join(':');
+  return parts.join(":");
 };
 
 /**
@@ -33,7 +35,7 @@ export const framesToHMSMs = (frames: number, fps: number) => {
   const seconds = Math.floor((totalMs % 60_000) / 1000);
   const milliseconds = totalMs % 1000;
 
-  const fullFormatted = 
+  const fullFormatted =
     `${hours.toString().padStart(2, "0")}:` +
     `${minutes.toString().padStart(2, "0")}:` +
     `${seconds.toString().padStart(2, "0")}.` +
@@ -42,6 +44,26 @@ export const framesToHMSMs = (frames: number, fps: number) => {
   return {
     frames,
     formatted: fullFormatted,
-    smart: formatSmartTime(fullFormatted)
+    smart: formatSmartTime(fullFormatted),
   };
+};
+  
+export const getActiveLabel = (
+  currentTime: number,
+  item: TimingItem,
+  fps: number,
+): string => {
+  const checkPoint = (targetTime: number | null, label: string) => {
+    if (targetTime === null) return null;
+    const diffFrames = Math.round((currentTime - targetTime) * fps);
+
+    if (diffFrames === 0) return `Exact ${label}`;
+    if (diffFrames === -1) return `${label} -1f`;
+    if (diffFrames === 1) return `${label} +1f`;
+    return null;
+  };
+
+  return (
+    checkPoint(item.startTime, "Start") || checkPoint(item.endTime, "End") || ""
+  );
 };

@@ -16,7 +16,7 @@ interface VideoPlayerProps {
   onJumpToTime: (time: number, id: string, label: string) => void;
   onControlAction: (
     type: "seek" | "frame" | "togglePause",
-    value: number
+    value: number,
   ) => void;
   overlappingLoadIndices: Set<number>;
   invalidDurationIndices: Set<number>;
@@ -26,7 +26,7 @@ interface VideoPlayerProps {
   // Verifier Specific Props
   verifierSettings: VerifierSettings;
   setVerifierSettings: (settings: VerifierSettings) => void;
-  jumpToVerify: (time: number | null, offset: number) => void;
+  onJumpToVerify: (time: number | null, offset: number, label: string) => void;
   onCycle: (direction: "next" | "prev") => void;
   activeOffsetLabel?: string;
 }
@@ -45,7 +45,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   isPlaying,
   verifierSettings,
   setVerifierSettings,
-  jumpToVerify,
+  onJumpToVerify,
   onCycle,
   activeOffsetLabel,
 }) => {
@@ -101,7 +101,11 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
                 <button
                   disabled={currentItem.startTime === null}
                   onClick={() =>
-                    onJumpToTime(currentItem.startTime!, currentItem.id, "exact start")
+                    onJumpToTime(
+                      currentItem.startTime!,
+                      currentItem.id,
+                      "exact start",
+                    )
                   }
                   onMouseDown={(e) => e.preventDefault()}
                   className={`font-mono transition-colors ${
@@ -121,7 +125,11 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
                   disabled={currentItem.endTime === null}
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={() =>
-                    onJumpToTime(currentItem.endTime!, currentItem.id, "exact end")
+                    onJumpToTime(
+                      currentItem.endTime!,
+                      currentItem.id,
+                      "exact end",
+                    )
                   }
                   className={`font-mono transition-colors ${
                     currentItem.endTime !== null
@@ -142,7 +150,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
           </div>
         </div>
 
-        { /* Custom Playback Controls Section */ }
+        {/* Custom Playback Controls Section */}
         <div className="flex flex-col gap-2 bg-slate-900/30 p-2 rounded-lg border border-slate-700/50">
           <div className="flex gap-1 items-center justify-between">
             <ControlButton
@@ -252,20 +260,20 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
                     label="Start -1f"
                     offset={-1}
                     time={currentItem.startTime}
-                    onClick={jumpToVerify}
+                    onClick={(t, o) => onJumpToVerify(t, o, "Start -1f")}
                   />
                   <VerifierJumpButton
                     label="Exact Start"
                     offset={0}
                     time={currentItem.startTime}
-                    onClick={jumpToVerify}
+                    onClick={(t, o) => onJumpToVerify(t, o, "Exact Start")}
                     primary
                   />
                   <VerifierJumpButton
                     label="Start +1f"
                     offset={1}
                     time={currentItem.startTime}
-                    onClick={jumpToVerify}
+                    onClick={(t, o) => onJumpToVerify(t, o, "Start +1f")}
                   />
                 </div>
 
@@ -275,20 +283,20 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
                     label="End -1f"
                     offset={-1}
                     time={currentItem.endTime}
-                    onClick={jumpToVerify}
+                    onClick={(t, o) => onJumpToVerify(t, o, "End -1f")}
                   />
                   <VerifierJumpButton
                     label="Exact End"
                     offset={0}
                     time={currentItem.endTime}
-                    onClick={jumpToVerify}
+                    onClick={(t, o) => onJumpToVerify(t, o, "Exact End")}
                     primary
                   />
                   <VerifierJumpButton
                     label="End +1f"
                     offset={1}
                     time={currentItem.endTime}
-                    onClick={jumpToVerify}
+                    onClick={(t, o) => onJumpToVerify(t, o, "End +1f")}
                   />
                 </div>
               </div>
