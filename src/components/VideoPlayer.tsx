@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { TimingItem, VerifierSettings } from "../types";
 import { getItemValidationStatus } from "../utils/validation";
 import Badge from "./ui/WarningBadge";
@@ -49,6 +49,13 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   onCycle,
   activeOffsetLabel,
 }) => {
+
+  const [isLabelDismissed, setIsLabelDismissed] = useState(false);
+
+  useEffect(() => {
+    setIsLabelDismissed(false);
+  }, [activeOffsetLabel]);
+
   if (!currentItem) return null;
 
   const isRun = currentItem.type === "run";
@@ -56,7 +63,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     currentItem,
     overlappingLoadIndices,
     invalidDurationIndices,
-    outsideRunIndices
+    outsideRunIndices,
   );
 
   const formatTime = (time: number | null) => {
@@ -68,11 +75,30 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
   return (
     <div className="bg-slate-800 rounded-lg shadow-2xl p-6 lg:col-span-2 flex flex-col border border-slate-700">
+      {/* Video Container*/}
       <div className="relative w-full aspect-video bg-black overflow-hidden mb-4 shadow-inner ring-1 ring-slate-700">
         <div
           ref={playerRef}
           className="absolute top-0 left-0 w-full h-full"
         ></div>
+        {/* Dismissable Active Offset Label */}
+        {isVerifier && activeOffsetLabel && !isLabelDismissed && (
+          <div
+            key={activeOffsetLabel}
+            onClick={() => setIsLabelDismissed(true)} 
+            className="absolute top-4 left-4 z-10 cursor-pointer group animate-in fade-in slide-in-from-left-4 duration-300"
+          >
+            <div className="flex items-center gap-2.5 bg-blue-600/90 hover:bg-blue-500 backdrop-blur-md px-4 py-2 rounded-md border border-blue-400/50 shadow-xl transition-colors">
+              <div className="w-2 h-2 bg-white rounded-full animate-pulse shadow-[0_0_8px_#fff]" />
+              <span className="text-white font-black text-sm uppercase tracking-widest font-mono">
+                {activeOffsetLabel}
+              </span>
+              <span className="text-blue-200 text-[10px] ml-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                ✕
+              </span>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="flex flex-col gap-4">
@@ -379,7 +405,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
       </div>
     </div>
   );
-};
+};;
 
 // Internal Helper Component
 const ControlButton: React.FC<{
