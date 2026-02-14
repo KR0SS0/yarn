@@ -10,7 +10,7 @@ Until now, speedrun moderators have been stuck in a redundant workflow:
 1. A Runner times their run's load to see if their Load Removed Time.
 2. A Verifier receives the video and re-times the entire thing from scratch to prove the runner wasn't lying.
 
-This manual "double-work" creates massive backlogs and human error. Yarn fixes this. It allows runners to export their timing markers as a JSON. Verifiers simply import the file and "audit" the markers, saving up to an hour of manual work.
+This manual "double-work" creates backlogs and human error. Yarn fixes this. It allows runners to export their timing markers as a shareable link or a JSON. Verifiers simply import the file and "audit" the markers, saving up to an hour of manual work.
 
 ### Transparency
 Beyond saving time, Yarn introduces a new standard of transparency to the community:
