@@ -546,10 +546,7 @@ const App = () => {
   };
 
   const performReset = useCallback(() => {
-    if (isDirty) {
-      createBackup();
-    }
-
+    createBackup();
     setVideoUrl("");
     setVideoId(null);
     setRunStart({ time: null, offset: 0 });
