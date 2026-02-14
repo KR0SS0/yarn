@@ -546,6 +546,10 @@ const App = () => {
   };
 
   const performReset = useCallback(() => {
+    if (isDirty) {
+      createBackup();
+    }
+
     setVideoUrl("");
     setVideoId(null);
     setRunStart({ time: null, offset: 0 });
@@ -553,11 +557,9 @@ const App = () => {
     setLoads([]);
     setCurrentSelectedIndex(0);
     setIsDirty(false);
-
-    if (isDirty) {
-      createBackup();
-    }
   }, [
+    isDirty,
+    createBackup,
     setVideoUrl,
     setVideoId,
     setRunStart,
