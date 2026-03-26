@@ -1,4 +1,4 @@
-import {useState, useRef, useEffect, useMemo, useCallback } from "react";
+import {useState, useEffect, useMemo, useCallback } from "react";
 import Header from "./components/Header";
 import VideoInput from "./components/VideoInput";
 import TimingSummary from "./components/TimingSummary";
@@ -15,6 +15,7 @@ import { useBackups } from "./hooks/useBackups";
 import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
 import { useValidation } from "./hooks/useValidation";
 import { useYouTubePlayer } from "./hooks/useYouTubePlayer";
+import { useTiming } from "./hooks/useTiming";
 
 const DEFAULT_TEST_VIDEO_ID = "IfFfdSRMpQs";
 
@@ -66,34 +67,21 @@ const App = () => {
     adjustedRunEnd,
   } = useValidation({ loads, runStart, runEnd });
 
+  const { timingItems, rtaFrames, lrtFrames, totalLoadFrames } = useTiming({
+    loads,
+    runStart,
+    runEnd,
+    fps,
+    adjustedRunStart,
+    adjustedRunEnd,
+  });
+
   const { ytPlayerRef, isPlaying, playerRefCallback, videoData } =
     useYouTubePlayer({
       videoId,
     });
 
   const currentAuthor = videoData?.author || "unknown";
-
-  const timingItems: TimingItem[] = useMemo(() => {
-    return [
-      {
-        id: "full-run",
-        type: "run",
-        label: "Full Run",
-        startTime: runStart.time,
-        endTime: runEnd.time,
-        isDeletable: false,
-      },
-      ...loads.map((load, index) => ({
-        id: load.id.toString(),
-        type: "load" as const,
-        label: `Load ${index + 1}`,
-        startTime: load.startTime,
-        endTime: load.endTime,
-        loadIndex: index,
-        isDeletable: true,
-      })),
-    ];
-  }, [loads, runStart, runEnd]);
 
   const canExport = runStart.time !== null && runEnd.time !== null;
 
@@ -115,30 +103,6 @@ const App = () => {
     isDirty,
     setIsDirty,
   );
-
-  // --- Frame Calculations ---
-  const totalLoadFrames = useMemo(() => {
-    return loads.reduce((sum, load) => {
-      if (load.startTime !== null && load.endTime !== null) {
-        return (
-          sum +
-          (secondsToFrames(load.endTime, fps) -
-            secondsToFrames(load.startTime, fps))
-        );
-      }
-      return sum;
-    }, 0);
-  }, [loads, fps]);
-
-  const adjustedRunStartFrames =
-    adjustedRunStart !== null ? secondsToFrames(adjustedRunStart, fps) : null;
-  const adjustedRunEndFrames =
-    adjustedRunEnd !== null ? secondsToFrames(adjustedRunEnd, fps) : null;
-  const rtaFrames =
-    adjustedRunStartFrames !== null && adjustedRunEndFrames !== null
-      ? adjustedRunEndFrames - adjustedRunStartFrames
-      : null;
-  const lrtFrames = rtaFrames !== null ? rtaFrames - totalLoadFrames : null;
 
   const updateLabelAutomatically = useCallback(
     (time: number) => {
