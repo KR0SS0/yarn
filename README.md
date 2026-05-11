@@ -17,7 +17,7 @@ This manual "double-work" creates backlogs and human error. Yarn fixes this. It 
 ### Transparency
 Beyond saving time, Yarn introduces a new standard of transparency to the community:
 
-1. Public Verification: Anyone in the community can import that file to see the exact frames used for the timing.
+1. Public Verification: Anyone in the community can view the timed loads to see the exact frames used for the timing.
 
 2. Eliminating Bias: By making the timing markers visible, Yarn removes the "black box" of verification. It ensures that every moderator is holding every runner to the exact same standard, frame-by-frame.
 
