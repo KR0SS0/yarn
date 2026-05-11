@@ -1,4 +1,4 @@
-import { TimingItem } from "../types";
+import { TimingItem, VerificationPoint, VerifierSettings } from "../types";
 
 /*
  * Convert seconds to frames using a fixed FPS.
@@ -48,6 +48,29 @@ export const framesToHMSMs = (frames: number, fps: number) => {
   };
 };
   
+export const getVerificationPoints = (
+  item: TimingItem,
+  settings: VerifierSettings,
+): VerificationPoint[] => {
+  const makeLabel = (offset: number, isStart: boolean): string => {
+    const side = isStart ? "Start" : "End";
+    if (offset === -1) return `${side} -1f`;
+    if (offset === 1) return `${side} +1f`;
+    return `Exact ${side}`;
+  };
+
+  return [
+    { time: item.startTime, offset: -1, active: settings.checkBeforeStart, isStart: true },
+    { time: item.startTime, offset:  0, active: true,                       isStart: true },
+    { time: item.startTime, offset:  1, active: settings.checkAfterStart,   isStart: true },
+    { time: item.endTime,   offset: -1, active: settings.checkBeforeEnd,    isStart: false },
+    { time: item.endTime,   offset:  0, active: true,                       isStart: false },
+    { time: item.endTime,   offset:  1, active: settings.checkAfterEnd,     isStart: false },
+  ]
+    .filter((p): p is typeof p & { time: number } => p.time !== null && p.active)
+    .map((p) => ({ time: p.time, offset: p.offset, isStart: p.isStart, label: makeLabel(p.offset, p.isStart) }));
+};
+
 export const getActiveLabel = (
   currentTime: number,
   item: TimingItem,

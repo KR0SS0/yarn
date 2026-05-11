@@ -35,6 +35,13 @@ export interface RunSession {
   verifierSettings: VerifierSettings;
 }
 
+export interface VerificationPoint {
+  time: number;
+  offset: number;
+  isStart: boolean;
+  label: string;
+}
+
 export type ValidationType = "overlap" | "invalid-duration" | "outside-run" | "error";
 
 export interface ValidationWarning {
