@@ -7,6 +7,7 @@ import TimingList from "./components/TimingList";
 import ValidationWarnings from "./components/ValidationWarnings";
 import { extractVideoId } from "./utils/youtube";
 import { getActiveLabel, getVerificationPoints } from "./utils/timing";
+import { accent } from "./utils/theme";
 import { validateLoad } from "./utils/validation";
 import { saveRunToCloud, fetchRunFromCloud } from "./services/runService";
 import { useRunManager } from "./hooks/useRunManager";
@@ -405,8 +406,11 @@ const App = () => {
     }
   };
 
+  const a = accent(mode);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 text-white p-6">
+      <div className={`fixed top-0 left-0 right-0 h-1 z-50 transition-colors duration-300 ${a.bg600}`} />
       <div className="max-w-7xl mx-auto">
         <Header
           mode={mode}

@@ -1,12 +1,13 @@
 const PillToggle: React.FC<{
   checked: boolean;
   onChange: (val: boolean) => void;
-}> = ({ checked, onChange }) => (
+  checkedColor?: string;
+}> = ({ checked, onChange, checkedColor = "bg-blue-500" }) => (
   <button
     onClick={() => onChange(!checked)}
     onMouseDown={(e) => e.preventDefault()}
     className={`relative inline-flex h-4 w-7 items-center rounded-full transition-colors ${
-      checked ? "bg-blue-500" : "bg-slate-600"
+      checked ? checkedColor : "bg-slate-600"
     }`}
   >
     <span
