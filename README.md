@@ -3,7 +3,7 @@
 
 A tool that lets runners time their own loading screens using YouTube frame data, while giving verifiers an easy way to audit them without downloading videos.
 
-Yarn is a web-based tool designed to solve the "Time Without Loads" problem in competitive gaming. It bridges the gap between Runners and Verifiers by turning timing into a transparent, shareable, and auditable data format.
+Yarn is a web-based tool designed to solve the "Time Without Loads" problem in speedrunning. It bridges the gap between Runners and Verifiers by turning timing into a transparent, shareable, and auditable data format.
 
 ## Purpose of tool
 In speedrunning, a record time should be determined by a player's skill, not the speed of their hardware. Because one player might have a faster computer/console than another player, many communities use LRT (Load Removed Time). This "pauses the clock" during loading screens to ensure a fair, skill-based competition.
