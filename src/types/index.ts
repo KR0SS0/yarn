@@ -26,6 +26,15 @@ export interface VerifierSettings {
   checkAfterEnd: boolean;
 }
 
+export interface RunSession {
+  videoId: string | null;
+  fps: number;
+  runStart: RunMarker;
+  runEnd: RunMarker;
+  loads: Load[];
+  verifierSettings: VerifierSettings;
+}
+
 export type ValidationType = "overlap" | "invalid-duration" | "outside-run" | "error";
 
 export interface ValidationWarning {

@@ -1,16 +1,16 @@
-import {useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Header from "./components/Header";
 import VideoInput from "./components/VideoInput";
 import TimingSummary from "./components/TimingSummary";
 import VideoPlayer from "./components/VideoPlayer";
 import TimingList from "./components/TimingList";
 import ValidationWarnings from "./components/ValidationWarnings";
-import {Load, RunMarker, TimingItem, VerifierSettings} from "./types";
+import { TimingItem } from "./types";
 import { extractVideoId } from "./utils/youtube";
-import { getActiveLabel, secondsToFrames } from "./utils/timing";
+import { getActiveLabel } from "./utils/timing";
 import { validateLoad } from "./utils/validation";
-import { usePersistentState } from "./hooks/usePersistanceState";
 import { saveRunToCloud, fetchRunFromCloud } from "./services/runService";
+import { useRunManager } from "./hooks/useRunManager";
 import { useBackups } from "./hooks/useBackups";
 import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
 import { useValidation } from "./hooks/useValidation";
@@ -20,43 +20,30 @@ import { useTiming } from "./hooks/useTiming";
 const DEFAULT_TEST_VIDEO_ID = "IfFfdSRMpQs";
 
 const App = () => {
-  // Persistent States
-  const [fps, setFps] = usePersistentState<number>("yt_fps", 30);
-  const [runStart, setRunStart] = usePersistentState<RunMarker>(
-    "yt_run_start",
-    { time: null, offset: 0 },
-  );
-  const [runEnd, setRunEnd] = usePersistentState<RunMarker>("yt_run_end", {
-    time: null,
-    offset: 0,
-  });
-  const [loads, setLoads] = usePersistentState<Load[]>("yt_loads", []);
-  const [videoUrl, setVideoUrl] = usePersistentState<string>(
-    "yt_video_url",
-    "",
-  );
-  const [videoId, setVideoId] = usePersistentState<string | null>(
-    "yt_video_id",
-    null,
-  );
-  const [currentSelectedIndex, setCurrentSelectedIndex] =
-    usePersistentState<number>("yt_selected_index", 0);
-  const [verifierSettings, setVerifierSettings] =
-    usePersistentState<VerifierSettings>("yt_verifier_settings", {
-      checkBeforeStart: true,
-      checkAfterStart: false,
-      checkBeforeEnd: true,
-      checkAfterEnd: false,
-    });
+  const {
+    fps, setFps,
+    runStart, setRunStart,
+    runEnd, setRunEnd,
+    loads, setLoads,
+    videoUrl, setVideoUrl,
+    videoId, setVideoId,
+    currentSelectedIndex, setCurrentSelectedIndex,
+    verifierSettings, setVerifierSettings,
+    isDirty, setIsDirty,
+    canExport,
+    currentSessionData,
+    updateFps,
+    addLoad,
+    importRun,
+    resetRun,
+  } = useRunManager();
 
-  // Non-Persistent States
   const [mode, setMode] = useState<"runner" | "verifier">("runner");
   const [urlError, setUrlError] = useState("");
   const [showFpsHelp, setShowFpsHelp] = useState(false);
   const [isAutoLoadSelecting, setIsAutoLoadSelecting] = useState(true);
   const [isSharing, setIsSharing] = useState(false);
   const [activeOffsetLabel, setActiveOffsetLabel] = useState<string>("");
-  const [isDirty, setIsDirty] = useState(false);
 
   const {
     overlappingIndices,
@@ -82,20 +69,6 @@ const App = () => {
     });
 
   const currentAuthor = videoData?.author || "unknown";
-
-  const canExport = runStart.time !== null && runEnd.time !== null;
-
-  const currentSessionData = useMemo(
-    () => ({
-      videoId,
-      fps,
-      runStart,
-      runEnd,
-      loads,
-      verifierSettings,
-    }),
-    [videoId, fps, runStart, runEnd, loads, verifierSettings],
-  );
 
   const { backups, createBackup } = useBackups(
     currentSessionData,
@@ -188,16 +161,9 @@ const App = () => {
           adjustedRunStart,
           adjustedRunEnd,
         );
-        if (!hasError) handleAddLoad();
+        if (!hasError) addLoad();
       }
     }
-    setIsDirty(true);
-  };
-
-  const handleAddLoad = () => {
-    const newLoad: Load = { id: Date.now(), startTime: null, endTime: null };
-    setLoads((prev) => [...prev, newLoad]);
-    setCurrentSelectedIndex(loads.length + 1);
     setIsDirty(true);
   };
 
@@ -481,24 +447,6 @@ const App = () => {
     URL.revokeObjectURL(href);
   };
 
-  const handleImport = (data: any) => {
-    // Clear the videoId first to "blink" the component
-    setVideoId(null);
-
-    // Use a tiny timeout to let React process the "null" before setting the new one
-    setTimeout(() => {
-      if (data.videoId) {
-        setVideoUrl(`https://www.youtube.com/watch?v=${data.videoId}`);
-        setVideoId(data.videoId);
-      }
-      if (data.fps) setFps(data.fps);
-      if (data.runStart) setRunStart(data.runStart);
-      if (data.runEnd) setRunEnd(data.runEnd);
-      if (data.loads) setLoads(data.loads);
-      setCurrentSelectedIndex(0);
-    }, 10);
-  };
-
   const handleResetAll = () => {
     if (
       window.confirm(
@@ -554,7 +502,7 @@ const App = () => {
       const loadCloudData = async () => {
         try {
           const data = await fetchRunFromCloud(runId);
-          handleImport(data);
+          importRun(data);
 
           // Clean the URL to avoid re-importing if the user refreshes
           // We want the use the localStorage when refreshed not the url save
@@ -619,7 +567,7 @@ const App = () => {
           isSharing={isSharing}
           backups={backups}
           onManualBackup={createBackup}
-          onImport={handleImport}
+          onImport={importRun}
           canExport={canExport}
           onReset={handleResetAll}
         />
@@ -667,7 +615,7 @@ const App = () => {
               currentIndex={currentSelectedIndex}
               mode={mode}
               onJumpToTime={handleJumpToTime}
-              onAddLoad={handleAddLoad}
+              onAddLoad={addLoad}
               onDeleteItem={handleDeleteItem}
               overlappingLoadIndices={overlappingIndices}
               invalidDurationIndices={invalidDurationIndices}
