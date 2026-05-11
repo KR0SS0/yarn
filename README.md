@@ -1,4 +1,6 @@
 # Yarn
+[![CI/CD](https://github.com/KR0SS0/yarn/actions/workflows/ci.yml/badge.svg)](https://github.com/KR0SS0/yarn/actions/workflows/ci.yml)
+
 A tool that lets runners time their own loading screens using YouTube frame data, while giving verifiers an easy way to audit them without downloading videos.
 
 Yarn is a web-based tool designed to solve the "Time Without Loads" problem in competitive gaming. It bridges the gap between Runners and Verifiers by turning timing into a transparent, shareable, and auditable data format.
@@ -20,6 +22,18 @@ Beyond saving time, Yarn introduces a new standard of transparency to the commun
 2. Eliminating Bias: By making the timing markers visible, Yarn removes the "black box" of verification. It ensures that every moderator is holding every runner to the exact same standard, frame-by-frame.
 
 3. Crowdsourced Accuracy: If a mistake is found in a world-record time months later, the Yarn file can be updated and re-verified without needing to re-watch the entire video and re-mark the loads from scratch.
+
+## Development Setup
+
+```bash
+git clone https://github.com/KR0SS0/yarn.git
+cd yarn
+npm install
+cp .env.example .env.local   # then fill in your Firebase credentials
+npm start
+```
+
+See `.env.example` for the required environment variables.
 
 ## Shortcuts
 Uses standard YouTube shortcuts when possible.
