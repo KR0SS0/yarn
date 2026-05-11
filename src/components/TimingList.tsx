@@ -1,11 +1,12 @@
 import React, { useEffect } from "react";
-import { Trash2, Flag } from "lucide-react"; // Added CheckCircle for a "Verified" feel later
+import { Trash2, Flag } from "lucide-react"; 
 import { TimingItem } from "../types";
 import { getItemValidationStatus } from "../utils/validation";
 import { framesToHMSMs, secondsToFrames } from "../utils/timing";
 import Badge from "./ui/WarningBadge";
 import Tooltip from "./ui/Tooltip";
 import PillToggle from "./ui/PillToggle";
+import { blue } from "../utils/theme";
 
 interface TimingListProps {
   items: TimingItem[];
@@ -77,7 +78,7 @@ useEffect(() => {
             <button
               onClick={onAddLoad}
               onMouseDown={(e) => e.preventDefault()}
-              className="px-3 py-1.5 bg-blue-600 rounded-md hover:bg-blue-700 transition text-xs font-semibold text-white shadow-lg shadow-blue-900/20"
+              className={`px-3 py-1.5 ${blue.bg600} rounded-md ${blue.bg700hover} transition text-xs font-semibold text-white shadow-lg ${blue.shadow}`}
             >
               + Add
             </button>
@@ -106,7 +107,7 @@ useEffect(() => {
                     ? "bg-red-900/40 border-red-500"
                     : item.type === "run"
                       ? "bg-green-900/20 border-green-500"
-                      : "bg-blue-900/40 border-blue-500"
+                      : `${blue.bgSelected} ${blue.border500}`
                   : status.hasError
                     ? "bg-red-900/20 border-red-900/50"
                     : "bg-slate-700/50 hover:bg-slate-700 border-transparent shadow-sm"
@@ -122,7 +123,7 @@ useEffect(() => {
                   ) : (
                     <div className="flex items-center gap-2">
                       <div
-                        className={`w-1.5 h-1.5 rounded-full ${isSelected ? "bg-blue-400 animate-pulse" : "bg-slate-500"}`}
+                        className={`w-1.5 h-1.5 rounded-full ${isSelected ? `${blue.bg400} animate-pulse` : "bg-slate-500"}`}
                       />
                       <span>Load #{item.loadIndex! + 1}</span>
                     </div>
@@ -149,7 +150,7 @@ useEffect(() => {
                   )}
                   {/* Visual indicator for which one is being verified */}
                   {isVerifier && isSelected && (
-                    <span className="text-[9px] bg-blue-500 text-white px-1.5 py-0.5 rounded font-bold animate-pulse uppercase">
+                    <span className={`text-[9px] ${blue.bg500} text-white px-1.5 py-0.5 rounded font-bold animate-pulse uppercase`}>
                       Auditing
                     </span>
                   )}
@@ -161,6 +162,7 @@ useEffect(() => {
                   label="Start"
                   time={item.startTime}
                   fps={fps}
+
                   // In verifier mode, clicking the time jumps to the "0 offset" marker
                   onClick={() => onJumpToTime(item.startTime!, item.id, "exact start")}
                 />
@@ -168,6 +170,7 @@ useEffect(() => {
                   label="End"
                   time={item.endTime}
                   fps={fps}
+
                   onClick={() => onJumpToTime(item.endTime!, item.id, "exact end")}
                 />
                 <div className="flex flex-col">
@@ -205,26 +208,28 @@ const TimeAction: React.FC<{
   time: number | null;
   fps: number;
   onClick: () => void;
-}> = ({ label, time, fps, onClick }) => (
-  <div className="flex flex-col">
-    <span className="text-slate-500 uppercase font-bold text-[9px]">
-      {label}
-    </span>
-    {time !== null ? (
-      <button
-        onClick={(e) => {
-          e.stopPropagation();
-          onClick();
-        }}
-        onMouseDown={(e) => e.preventDefault()}
-        className="text-blue-400 hover:text-blue-300 text-left font-mono underline decoration-blue-400/30 underline-offset-2 mt-0.5 transition-colors"
-      >
-        {framesToHMSMs(secondsToFrames(time, fps), fps).smart}
-      </button>
-    ) : (
-      <span className="text-slate-600 italic mt-0.5">--</span>
-    )}
-  </div>
-);
+}> = ({ label, time, fps, onClick }) => {
+  return (
+    <div className="flex flex-col">
+      <span className="text-slate-500 uppercase font-bold text-[9px]">
+        {label}
+      </span>
+      {time !== null ? (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onClick();
+          }}
+          onMouseDown={(e) => e.preventDefault()}
+          className={`${blue.text400} ${blue.hoverText400} text-left font-mono underline decoration-current/30 underline-offset-2 mt-0.5 transition-colors`}
+        >
+          {framesToHMSMs(secondsToFrames(time, fps), fps).smart}
+        </button>
+      ) : (
+        <span className="text-slate-600 italic mt-0.5">--</span>
+      )}
+    </div>
+  );
+};
 
 export default TimingList;

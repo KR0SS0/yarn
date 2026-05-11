@@ -7,6 +7,7 @@ import { Play, Pause, ChevronLeft, ChevronRight } from "lucide-react";
 import Tooltip from "./ui/Tooltip";
 import PillToggle from "./ui/PillToggle";
 import VerifierJumpButton from "./ui/VerifierJumpButton";
+import { blue } from "../utils/theme";
 
 interface VideoPlayerProps {
   playerRef: (node: HTMLDivElement | null) => void;
@@ -88,12 +89,12 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
             onClick={() => setIsLabelDismissed(true)} 
             className="absolute top-4 left-4 z-10 cursor-pointer group animate-in fade-in slide-in-from-left-4 duration-300"
           >
-            <div className="flex items-center gap-2.5 bg-blue-600/90 hover:bg-blue-500 backdrop-blur-md px-4 py-2 rounded-md border border-blue-400/50 shadow-xl transition-colors">
+            <div className={`flex items-center gap-2.5 ${blue.labelOffset} ${blue.bg600hover} backdrop-blur-md px-4 py-2 rounded-md border ${blue.border400} shadow-xl transition-colors`}>
               <div className="w-2 h-2 bg-white rounded-full animate-pulse shadow-[0_0_8px_#fff]" />
               <span className="text-white font-black text-sm uppercase tracking-widest font-mono">
                 {activeOffsetLabel}
               </span>
-              <span className="text-blue-200 text-[10px] ml-1 opacity-0 group-hover:opacity-100 transition-opacity">
+              <span className={`${blue.text200} text-[10px] ml-1 opacity-0 group-hover:opacity-100 transition-opacity`}>
                 ✕
               </span>
             </div>
@@ -113,7 +114,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
                   : `Load #${currentItem.loadIndex! + 1}`}
               </span>
               {isVerifier && activeOffsetLabel && (
-                <span className="text-blue-400 ml-2 text-xs font-medium italic">
+                <span className={`${blue.text400} ml-2 text-xs font-medium italic`}>
                   ({activeOffsetLabel.toLowerCase()})
                 </span>
               )}
@@ -136,7 +137,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
                   onMouseDown={(e) => e.preventDefault()}
                   className={`font-mono transition-colors ${
                     currentItem.startTime !== null
-                      ? "text-white hover:text-blue-400 underline decoration-white/20"
+                      ? `text-white ${blue.hoverText400} underline decoration-white/20`
                       : "text-slate-500"
                   }`}
                 >
@@ -159,7 +160,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
                   }
                   className={`font-mono transition-colors ${
                     currentItem.endTime !== null
-                      ? "text-white hover:text-blue-400 underline decoration-white/20"
+                      ? `text-white ${blue.hoverText400} underline decoration-white/20`
                       : "text-slate-500"
                   }`}
                 >
@@ -248,7 +249,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
         </div>
 
         {isVerifier ? (
-          <div className="flex flex-col gap-4 bg-blue-900/10 p-4 rounded-lg border border-blue-500/30">
+          <div className={`flex flex-col gap-4 ${blue.bgFaint} p-4 rounded-lg border ${blue.borderFaint}`}>
             {/* Top Row: Navigation & Jump Actions */}
             <div className="flex items-center gap-6">
               {/* Cycle Navigation */}
@@ -257,7 +258,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
                   <button
                     onClick={() => onCycle("prev")}
                     onMouseDown={(e) => e.preventDefault()}
-                    className="p-2 hover:bg-slate-800 text-blue-400 rounded transition"
+                    className={`p-2 hover:bg-slate-800 ${blue.text400} rounded transition`}
                   >
                     <ChevronLeft size={20} />
                   </button>
@@ -271,7 +272,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
                   <button
                     onClick={() => onCycle("next")}
                     onMouseDown={(e) => e.preventDefault()}
-                    className="p-2 hover:bg-slate-800 text-blue-400 rounded transition"
+                    className={`p-2 hover:bg-slate-800 ${blue.text400} rounded transition`}
                   >
                     <ChevronRight size={20} />
                   </button>
@@ -436,11 +437,11 @@ const ToggleGroup: React.FC<{
 }> = ({ label, checked, onChange }) => (
   <div className="flex items-center gap-2">
     <span
-      className={`text-[10px] font-medium transition-colors ${checked ? "text-blue-300" : "text-slate-500"}`}
+      className={`text-[10px] font-medium transition-colors ${checked ? blue.text300 : "text-slate-500"}`}
     >
       {label}
     </span>
-    <PillToggle checked={checked} onChange={onChange} />
+    <PillToggle checked={checked} onChange={onChange} checkedColor={blue.bg500} />
   </div>
 );
 

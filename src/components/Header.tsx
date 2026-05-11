@@ -50,9 +50,10 @@ const Header: React.FC<HeaderProps> = ({
 
   const getModeClass = (targetMode: "runner" | "verifier") => {
     const isActive = mode === targetMode;
+    const activeBg = targetMode === "verifier" ? "bg-purple-600" : "bg-blue-600";
     return `h-10 px-6 rounded-lg font-semibold transition-all duration-200 flex items-center justify-center ${
       isActive
-        ? "bg-blue-600 text-white ring-2 ring-white ring-offset-2 ring-offset-slate-800 shadow-lg"
+        ? `${activeBg} text-white ring-2 ring-white ring-offset-2 ring-offset-slate-800 shadow-lg`
         : "bg-slate-700 text-slate-300 hover:bg-slate-600"
     }`;
   };
