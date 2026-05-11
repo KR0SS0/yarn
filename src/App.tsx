@@ -21,7 +21,7 @@ const DEFAULT_TEST_VIDEO_ID = "IfFfdSRMpQs";
 
 const App = () => {
   const {
-    fps, setFps,
+    fps,
     runStart, setRunStart,
     runEnd, setRunEnd,
     loads, setLoads,
@@ -457,25 +457,7 @@ const App = () => {
     }
   };
 
-  const performReset = useCallback(() => {
-    createBackup();
-    setVideoUrl("");
-    setVideoId(null);
-    setRunStart({ time: null, offset: 0 });
-    setRunEnd({ time: null, offset: 0 });
-    setLoads([]);
-    setCurrentSelectedIndex(0);
-    setIsDirty(false);
-  }, [
-    isDirty,
-    createBackup,
-    setVideoUrl,
-    setVideoId,
-    setRunStart,
-    setRunEnd,
-    setLoads,
-    setCurrentSelectedIndex,
-  ]);
+  const performReset = useCallback(() => resetRun(createBackup), [resetRun, createBackup]);
 
   // --- Effects ---
   useEffect(() => {
@@ -551,11 +533,6 @@ const App = () => {
     }
   };
 
-  const handleFpsChange = (newFps: number) => {
-    setFps(newFps);
-    setIsDirty(true);
-  };
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 text-white p-6">
       <div className="max-w-7xl mx-auto">
@@ -578,7 +555,7 @@ const App = () => {
           urlError={urlError}
           setUrlError={setUrlError}
           fps={fps}
-          setFps={handleFpsChange}
+          setFps={updateFps}
           showFpsHelp={showFpsHelp}
           setShowFpsHelp={setShowFpsHelp}
           onLoadVideo={handleLoadVideo}
