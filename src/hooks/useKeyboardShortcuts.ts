@@ -100,5 +100,5 @@ export const useKeyboardShortcuts = ({
 
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
-  }, [fps, onCycleVerifier, ytPlayerRef]);
+  }, [fps, onCycleVerifier, onControlAction, ytPlayerRef]);
 };

@@ -112,7 +112,7 @@ const App = () => {
       setVideoId(null);
       setUrlError("Invalid YouTube URL");
     }
-  }, [videoUrl, videoId, setVideoId, setUrlError]);
+  }, [videoUrl, videoId, setVideoId, setUrlError, ytPlayerRef]);
 
   const handleMarkTime = useCallback((type: "start" | "end") => {
     const player = ytPlayerRef.current;
@@ -150,7 +150,7 @@ const App = () => {
       }
     }
     setIsDirty(true);
-  }, [timingItems, currentSelectedIndex, isAutoLoadSelecting, loads, adjustedRunStart, adjustedRunEnd, setRunStart, setRunEnd, setLoads, setIsDirty, addLoad]);
+  }, [timingItems, currentSelectedIndex, isAutoLoadSelecting, loads, adjustedRunStart, adjustedRunEnd, setRunStart, setRunEnd, setLoads, setIsDirty, addLoad, ytPlayerRef]);
 
   const handleDeleteItem = useCallback((id: string) => {
     const indexToDelete = timingItems.findIndex((item) => item.id === id);
@@ -177,7 +177,7 @@ const App = () => {
       setCurrentSelectedIndex(itemIndex);
       setActiveOffsetLabel(getActiveLabel(time, timingItems[itemIndex], fps));
     }
-  }, [timingItems, fps, setCurrentSelectedIndex]);
+  }, [timingItems, fps, setCurrentSelectedIndex, ytPlayerRef]);
 
   // Logic to jump to specific verification points
   const handleJumpToVerify = useCallback(
@@ -194,7 +194,7 @@ const App = () => {
         updateLabelAutomatically(targetTime);
       }
     },
-    [fps, updateLabelAutomatically],
+    [fps, updateLabelAutomatically, ytPlayerRef],
   );
 
   const handleCycleVerifier = useCallback(
@@ -232,7 +232,7 @@ const App = () => {
         nextIdx += step;
       }
     },
-    [timingItems, currentSelectedIndex, verifierSettings, fps, setCurrentSelectedIndex, handleJumpToVerify],
+    [timingItems, currentSelectedIndex, verifierSettings, fps, setCurrentSelectedIndex, handleJumpToVerify, ytPlayerRef],
   );
 
   const handleControlAction = useCallback((
@@ -263,7 +263,7 @@ const App = () => {
     }
 
     updateLabelAutomatically(newTime);
-  }, [fps, updateLabelAutomatically]);
+  }, [fps, updateLabelAutomatically, ytPlayerRef]);
 
   const handleSelectAndVerify = useCallback((id: string) => {
     const itemIndex = timingItems.findIndex((i) => i.id === id);
@@ -283,7 +283,7 @@ const App = () => {
         ytPlayerRef.current?.seekTo(item.startTime, true);
       }
     }
-  }, [timingItems, mode, verifierSettings, setCurrentSelectedIndex, handleJumpToVerify]);
+  }, [timingItems, mode, verifierSettings, setCurrentSelectedIndex, handleJumpToVerify, ytPlayerRef]);
 
   const handleExportToJson = () => {
     // Get non-empty loads
@@ -368,7 +368,7 @@ const App = () => {
       };
       loadCloudData();
     }
-  }, []);
+  }, [importRun]);
 
   useKeyboardShortcuts({
     ytPlayerRef,
