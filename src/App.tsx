@@ -353,6 +353,15 @@ const App = () => {
     };
   }, []);
 
+  // URL - Reset
+  useEffect(() => {
+    const queryParams = new URLSearchParams(window.location.search);
+    if (queryParams.has("reset")) {
+      resetRun();
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, [resetRun]);
+
   // Cloud - Load
   useEffect(() => {
     const queryParams = new URLSearchParams(window.location.search);
