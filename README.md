@@ -9,6 +9,8 @@
 
 A frame-accurate load timing tool for speedrunners and verifiers, built around YouTube's iframe API.
 
+![Yarn demo](example.gif)
+
 ---
 
 ## The problem
