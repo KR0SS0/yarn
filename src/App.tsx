@@ -38,7 +38,9 @@ const App = () => {
     resetRun,
   } = useRunManager();
 
-  const [mode, setMode] = useState<"runner" | "verifier">("runner");
+  const [mode, setMode] = useState<"runner" | "verifier">(
+    new URLSearchParams(window.location.search).has("run") ? "verifier" : "runner"
+  );
   const [urlError, setUrlError] = useState("");
   const [showFpsHelp, setShowFpsHelp] = useState(false);
   const [isAutoLoadSelecting, setIsAutoLoadSelecting] = useState(true);
