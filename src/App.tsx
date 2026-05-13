@@ -209,9 +209,12 @@ const App = () => {
       if (currentItem) {
         const points = getVerificationPoints(currentItem, verifierSettings);
         const candidates = direction === "next" ? points : [...points].reverse();
-        const target = candidates.find(
-          (p) => p.time + p.offset / fps > currentTime + threshold,
-        );
+        const target = candidates.find((p) => {
+          const pointTime = p.time + p.offset / fps;
+          return direction === "next"
+            ? pointTime > currentTime + threshold
+            : pointTime < currentTime + threshold;
+        });
         if (target) {
           handleJumpToVerify(target.time, target.offset, target.label);
           return;
