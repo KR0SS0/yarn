@@ -60,6 +60,8 @@ export const useYouTubePlayer = ({ videoId }: UseYouTubePlayerProps) => {
 
         if (ytPlayerRef.current?.destroy) ytPlayerRef.current.destroy();
 
+        let firstPlayDone = false;
+
         new (window as any).YT.Player(element, {
           width: "100%",
           height: "100%",
@@ -75,12 +77,8 @@ export const useYouTubePlayer = ({ videoId }: UseYouTubePlayerProps) => {
             onReady: (e: any) => {
               ytPlayerRef.current = e.target;
               e.target.playVideo();
-              setTimeout(() => {
-                e.target.pauseVideo();
-                e.target.unMute();
-              }, 100);
 
-              // 2. Fallback: If oEmbed didn't work, try the Player API as a last resort
+              // Fallback: If oEmbed didn't work, try the Player API as a last resort
               const internalData = e.target.getVideoData();
               if (internalData?.author && internalData.author !== "unknown") {
                 setVideoData(
@@ -94,6 +92,15 @@ export const useYouTubePlayer = ({ videoId }: UseYouTubePlayerProps) => {
             },
             onStateChange: (e: any) => {
               const s = (window as any).YT.PlayerState;
+
+              // Pause on the first PLAYING event to show the first frame
+              if (e.data === s.PLAYING && !firstPlayDone) {
+                firstPlayDone = true;
+                e.target.pauseVideo();
+                e.target.unMute();
+                return;
+              }
+
               setIsPlaying(e.data === s.PLAYING || e.data === s.BUFFERING);
             },
           },
